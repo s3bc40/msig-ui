@@ -36,14 +36,11 @@ export default function Home() {
                 value={safeAddress}
                 onChange={(e) => setSafeAddress(e.target.value)}
                 placeholder="0x..."
-                className="rounded border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="input input-bordered w-full"
                 required
               />
             </div>
-            <button
-              type="submit"
-              className="rounded bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
-            >
+            <button type="submit" className="btn btn-primary w-full">
               Submit
             </button>
           </form>
