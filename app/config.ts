@@ -2,19 +2,17 @@
 
 import "@rainbow-me/rainbowkit/styles.css";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { Config } from "wagmi";
-import {
-  mainnet,
-  polygon,
-  optimism,
-  arbitrum,
-  base,
-  anvil,
-} from "wagmi/chains";
+import { Config, http } from "wagmi";
+import { mainnet, anvil, sepolia } from "wagmi/chains";
 
 export const config = getDefaultConfig({
   appName: "My RainbowKit App",
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-  chains: [mainnet, polygon, optimism, arbitrum, base, anvil],
+  chains: [mainnet, sepolia, anvil],
+  transports: {
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+    [anvil.id]: http(),
+  },
   ssr: true,
 }) as Config;
