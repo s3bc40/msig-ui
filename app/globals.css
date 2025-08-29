@@ -1,5 +1,12 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: bumblebee --default, sunset --prefersdark;
+  themes:
+    bumblebee --default,
+    sunset --prefersdark;
   exclude: rootscrollgutter;
+}
+
+/* https://github.com/rainbow-me/rainbowkit/issues/1546 */
+body > [data-rk] {
+  @apply flex min-h-screen flex-col;
 }

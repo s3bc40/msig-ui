@@ -6,6 +6,8 @@ import Safe, {
   PredictedSafeProps,
 } from "@safe-global/protocol-kit";
 import { useAccount, useClient } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Link from "next/link";
 
 // TODO implement protocol kit to connect to safe
 export default function HomePage() {
@@ -72,108 +74,134 @@ export default function HomePage() {
   };
 
   return (
-    <section className="mx-auto flex max-w-xl flex-col items-center justify-center gap-6 px-4 py-10">
-      {isConnected ? (
-        mode === null ? (
-          <div className="flex w-full flex-col gap-4">
-            <button
-              className="btn btn-primary btn-soft"
-              onClick={() => handleModeSelect("create")}
-            >
-              Create Safe Account
-            </button>
-            <button
-              className="btn btn-primary btn-soft"
-              onClick={() => handleModeSelect("connect")}
-            >
-              Connect to Safe Account
-            </button>
-          </div>
-        ) : mode === "create" ? (
-          <form
-            onSubmit={handleCreateSafe}
-            className="flex w-full flex-col gap-4 rounded-lg p-4"
-          >
-            <div className="flex flex-col gap-2">
-              {owners.map((owner, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <fieldset className="fieldset w-full">
-                    <legend className="fieldset-legend">Owner {idx + 1}</legend>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={owner}
-                        onChange={(e) => handleOwnerChange(idx, e.target.value)}
-                        placeholder="0x..."
-                        className="input validator w-full"
-                        pattern="^0x[a-fA-F0-9]{40}$"
-                        required
-                      />
-                      {owners.length > 1 && (
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-secondary"
-                          onClick={() => removeOwnerField(idx)}
-                        >
-                          -
-                        </button>
-                      )}
-                    </div>
-                  </fieldset>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="btn btn-secondary btn-soft w-fit"
-                onClick={addOwnerField}
-              >
-                + Add Owner
-              </button>
-            </div>
-            <fieldset className="fieldset w-full">
-              <legend className="fieldset-legend">Threshold</legend>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={owners.length}
-                  step={1}
-                  value={threshold}
-                  onChange={(e) => setThreshold(Number(e.target.value))}
-                  className="input validator w-fit"
-                  required
-                />
-                <p className="text-sm">
-                  out of {owners.length} signers required to confirm a
-                  transaction
-                </p>
-              </div>
-              <p className="validator-hint">
-                Threshold must be between 1 and {owners.length}
-              </p>
-            </fieldset>
-            <button
-              type="submit"
-              className="btn btn-primary btn-soft"
-              disabled={creating}
-            >
-              {creating ? "Creating..." : "Create"}
-            </button>
-            {error && <div className="text-error">{error}</div>}
-            {safeResult && (
-              <div className="alert alert-success mt-2">
-                Safe created! (see console for details)
-              </div>
-            )}
-          </form>
-        ) : (
-          <div className="alert alert-info">Connect to Safe: Coming soon</div>
-        )
-      ) : (
-        <p className="text-center text-lg">
-          Please connect your wallet to get started.
-        </p>
-      )}
-    </section>
+    <div className="mx-auto flex min-h-full w-full flex-col items-center justify-center gap-6 p-10">
+      <div className="card card-xl bg-base-100">
+        <div className="card-body items-center gap-10 text-center">
+          <h2 className="card-title text-4xl">MSIG UI</h2>
+          <p className="text-xl">
+            Your local safe wallet app to manage safe accounts.
+          </p>
+          <p className="text-lg">Connect your wallet to get started.</p>
+          {isConnected ? (
+            <Link href="/new-safe" className="btn btn-primary rounded">
+              Continue with {address?.slice(0, 6) + "..." + address?.slice(-4)}
+            </Link>
+          ) : (
+            <ConnectButton chainStatus={"none"} showBalance={false} />
+          )}
+        </div>
+      </div>
+    </div>
+
+    // <section className="mx-auto flex min-h-full flex-col items-center justify-center gap-6 px-4 py-10">
+    //   {isConnected ? (
+    //     mode === null ? (
+    //       <div className="flex w-full flex-col gap-4">
+    //         <button
+    //           className="btn btn-primary btn-soft"
+    //           onClick={() => handleModeSelect("create")}
+    //         >
+    //           Create Safe Account
+    //         </button>
+    //         <button
+    //           className="btn btn-primary btn-soft"
+    //           onClick={() => handleModeSelect("connect")}
+    //         >
+    //           Connect to Safe Account
+    //         </button>
+    //       </div>
+    //     ) : mode === "create" ? (
+    //       <form
+    //         onSubmit={handleCreateSafe}
+    //         className="flex w-full flex-col gap-4 rounded-lg p-4"
+    //       >
+    //         <div className="flex flex-col gap-2">
+    //           {owners.map((owner, idx) => (
+    //             <div key={idx} className="flex items-center gap-2">
+    //               <fieldset className="fieldset w-full">
+    //                 <legend className="fieldset-legend">Owner {idx + 1}</legend>
+    //                 <div className="flex items-center gap-2">
+    //                   <input
+    //                     type="text"
+    //                     value={owner}
+    //                     onChange={(e) => handleOwnerChange(idx, e.target.value)}
+    //                     placeholder="0x..."
+    //                     className="input validator w-full"
+    //                     pattern="^0x[a-fA-F0-9]{40}$"
+    //                     required
+    //                   />
+    //                   {owners.length > 1 && (
+    //                     <button
+    //                       type="button"
+    //                       className="btn btn-outline btn-secondary"
+    //                       onClick={() => removeOwnerField(idx)}
+    //                     >
+    //                       -
+    //                     </button>
+    //                   )}
+    //                 </div>
+    //               </fieldset>
+    //             </div>
+    //           ))}
+    //           <button
+    //             type="button"
+    //             className="btn btn-secondary btn-soft w-fit"
+    //             onClick={addOwnerField}
+    //           >
+    //             + Add Owner
+    //           </button>
+    //         </div>
+    //         <fieldset className="fieldset w-full">
+    //           <legend className="fieldset-legend">Threshold</legend>
+    //           <div className="flex items-center gap-2">
+    //             <input
+    //               type="number"
+    //               min={1}
+    //               max={owners.length}
+    //               step={1}
+    //               value={threshold}
+    //               onChange={(e) => setThreshold(Number(e.target.value))}
+    //               className="input validator w-fit"
+    //               required
+    //             />
+    //             <p className="text-sm">
+    //               out of {owners.length} signers required to confirm a
+    //               transaction
+    //             </p>
+    //           </div>
+    //           <p className="validator-hint">
+    //             Threshold must be between 1 and {owners.length}
+    //           </p>
+    //         </fieldset>
+    //         <button
+    //           type="submit"
+    //           className="btn btn-primary btn-soft"
+    //           disabled={creating}
+    //         >
+    //           {creating ? "Creating..." : "Create"}
+    //         </button>
+    //         {error && <div className="text-error">{error}</div>}
+    //         {safeResult && (
+    //           <div className="alert alert-success mt-2">
+    //             Safe created! (see console for details)
+    //           </div>
+    //         )}
+    //       </form>
+    //     ) : (
+    //       <div className="alert alert-info">Connect to Safe: Coming soon</div>
+    //     )
+    //   ) : (
+    //     <div className="card card-xl bg-base-100 w-full">
+    //       <div className="card-body items-center gap-10 text-center">
+    //         <h2 className="card-title text-4xl">MSIG UI</h2>
+    //         <p className="text-xl">
+    //           Your local safe wallet app to manage safe accounts.
+    //         </p>
+    //         <p className="text-lg">Connect your wallet to get started.</p>
+    //         <ConnectButton chainStatus={"none"} showBalance={false} />
+    //       </div>
+    //     </div>
+    //   )}
+    // </section>
   );
 }
