@@ -9,7 +9,7 @@ export default function BtnBackHistory({ label }: { label?: string }) {
       className="btn btn-ghost btn-secondary"
       onClick={() => router.back()}
     >
-      ← {label || "Cancel"}
+      {label || "← Cancel"}
     </button>
   );
 }

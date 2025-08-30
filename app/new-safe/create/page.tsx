@@ -4,163 +4,141 @@ import BtnBack from "@/app/components/BtnBackHistory";
 import { useState } from "react";
 import { useChains } from "wagmi";
 import { type Chain } from "viem";
+import StepNetworks from "./components/StepNetworks";
+import StepSigners from "./components/StepSigners";
+import StepValidate from "./components/StepValidate";
 
 const steps = ["Networks", "Signers & Threshold", "Validate"];
 
 function SafeInfoCard({
   chains,
   selected,
+  signers,
+  threshold,
 }: {
   chains: readonly Chain[];
   selected: number[];
+  signers: string[];
+  threshold: number;
 }) {
   return (
-    <div>
-      <p className="font-semibold">Selected Networks:</p>
-      <ul className="ml-4 list-disc">
-        {selected.length === 0 ? (
-          <li className="text-base-content">None selected</li>
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className="mb-1 font-semibold">Selected Networks:</p>
+        <div className="flex flex-wrap gap-2">
+          {selected.length === 0 ? (
+            <span className="badge badge-soft text-base-content">
+              None selected
+            </span>
+          ) : (
+            selected.map((id) => {
+              const net = chains.find((n) => n.id === id);
+              return (
+                <span key={id} className="badge badge-accent badge-soft">
+                  {net?.name || id}
+                </span>
+              );
+            })
+          )}
+        </div>
+      </div>
+      <div className="divider my-0" />
+      <div>
+        <p className="mb-1 font-semibold">Signers:</p>
+        {signers.length === 0 || signers.every((s) => !s) ? (
+          <div className="alert alert-info">No signers added</div>
         ) : (
-          selected.map((id) => {
-            const net = chains.find((n) => n.id === id);
-            return <li key={id}>{net?.name || id}</li>;
-          })
+          <div className="overflow-x-auto">
+            <table className="table-zebra table w-full">
+              <tbody>
+                {signers.map((address, idx) =>
+                  address ? (
+                    <tr key={idx}>
+                      <td>{idx + 1}</td>
+                      <td>{address}</td>
+                    </tr>
+                  ) : null,
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
-      </ul>
+      </div>
+      <div className="divider my-0" />
+      <div>
+        <p className="mb-1 font-semibold">Threshold:</p>
+        <div className="alert alert-success">
+          <span>
+            <b>{threshold}</b> out of <b>{signers.length}</b> signers required
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function CreateSafePage() {
-  const [selectedNetworks, setSelectedNetworks] = useState<number[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
-
   const chains = useChains();
 
-  const handleCheckbox = (id: number) => {
+  // Step management
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Network selection state
+  const [selectedNetworks, setSelectedNetworks] = useState<number[]>([]);
+  function handleCheckbox(id: number) {
     setSelectedNetworks((prev) =>
       prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id],
     );
-  };
+  }
+  function handleReset() {
+    setSelectedNetworks([]);
+  }
 
-  const handleReset = () => setSelectedNetworks([]);
+  // Owners and threshold state
+  const [signers, setSigners] = useState<string[]>([""]);
+  const [threshold, setThreshold] = useState<number>(1);
+  function addSignerField() {
+    setSigners((prev) => [...prev, ""]);
+  }
+  function removeSignerField(signerIdx: number) {
+    setSigners((prev) => prev.filter((_, idx) => idx !== signerIdx));
+  }
+  function handleSignerChange(signerIdx: number, value: string) {
+    setSigners((prevSigners) =>
+      prevSigners.map((owner, idx) => (idx === signerIdx ? value : owner)),
+    );
+  }
 
-  // Content for each step
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <div className="card card-lg bg-base-100 col-span-6 shadow-xl md:col-span-4">
-            <div className="card-body gap-8">
-              <h2 className="card-title">Select Ethereum Networks</h2>
-              <p className="text-base-content mb-2 text-sm">
-                Choose one or more Ethereum networks for your Safe account. You
-                can reset your selection or proceed to the next step at any
-                time.
-              </p>
-              <form
-                className="flex flex-wrap items-center gap-2"
-                onReset={handleReset}
-              >
-                <input
-                  className="btn btn-square btn-sm"
-                  type="reset"
-                  value="×"
-                />
-                {chains.map((net) => (
-                  <input
-                    key={net.id}
-                    type="checkbox"
-                    className="btn btn-dash btn-secondary btn-sm rounded"
-                    aria-label={net.name}
-                    checked={selectedNetworks.includes(net.id)}
-                    onChange={() => handleCheckbox(net.id)}
-                  />
-                ))}
-              </form>
-              <div className="card-actions mt-6 flex justify-between gap-4">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-secondary rounded"
-                  onClick={() => setCurrentStep(0)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary rounded"
-                  onClick={() =>
-                    setCurrentStep((s) => Math.min(s + 1, steps.length - 1))
-                  }
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      case 1:
-        return (
-          <div className="card card-lg bg-base-100 col-span-6 shadow-xl md:col-span-4">
-            <div className="card-body gap-8">
-              <h2 className="card-title">Signers and Threshold</h2>
-              <p className="text-base-content mb-2 text-sm">
-                Here you will select the signers and set the threshold for your
-                Safe account. (UI to be implemented)
-              </p>
-              <div className="card-actions mt-6 flex justify-between gap-4">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-secondary rounded"
-                  onClick={() => setCurrentStep((s) => Math.max(s - 1, 0))}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary rounded"
-                  onClick={() =>
-                    setCurrentStep((s) => Math.min(s + 1, steps.length - 1))
-                  }
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="card card-lg bg-base-100 col-span-6 shadow-xl md:col-span-4">
-            <div className="card-body gap-8">
-              <h2 className="card-title">Validate</h2>
-              <p className="text-base-content mb-2 text-sm">
-                Review and validate your Safe account setup. (UI to be
-                implemented)
-              </p>
-              <div className="card-actions mt-6 flex justify-between gap-4">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-secondary rounded"
-                  onClick={() => setCurrentStep((s) => Math.max(s - 1, 0))}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary rounded"
-                  // onClick={...finalize logic...}
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  // Step content as components
+  const stepContent = [
+    <StepNetworks
+      key="networks"
+      chains={chains}
+      selectedNetworks={selectedNetworks}
+      handleCheckbox={handleCheckbox}
+      handleReset={handleReset}
+      onNext={() => setCurrentStep(1)}
+      disableNext={selectedNetworks.length === 0}
+    />,
+    <StepSigners
+      key="signers"
+      signers={signers}
+      threshold={threshold}
+      addSignerField={addSignerField}
+      removeSignerField={removeSignerField}
+      handleSignerChange={handleSignerChange}
+      setThreshold={setThreshold}
+      onBack={() => setCurrentStep(0)}
+      onNext={() => setCurrentStep(2)}
+    />,
+    <StepValidate
+      key="validate"
+      onBack={() => setCurrentStep(1)}
+      onConfirm={() => {
+        /* finalize logic */
+      }}
+    />,
+  ];
 
   return (
     <div className="flex w-full flex-col gap-12 p-10">
@@ -187,12 +165,17 @@ export default function CreateSafePage() {
         </ul>
       </div>
       <div className="grid w-full grid-cols-6 gap-8">
-        {renderStepContent()}
+        {stepContent[currentStep]}
         {/* Safe Info Card: Display Selected Networks */}
-        <div className="card bg-base-100 card-lg col-span-4 col-start-2 flex flex-col shadow-xl md:col-span-2 md:col-start-auto">
-          <div className="card-body flex flex-1 flex-col place-content-start">
+        <div className="card card-border bg-base-100 card-xl col-span-4 col-start-2 flex flex-col shadow-xl md:col-span-2 md:col-start-auto">
+          <div className="card-body">
             <h2 className="card-title">Safe Account Preview</h2>
-            <SafeInfoCard chains={chains} selected={selectedNetworks} />
+            <SafeInfoCard
+              chains={chains}
+              selected={selectedNetworks}
+              signers={signers}
+              threshold={threshold}
+            />
           </div>
         </div>
       </div>
