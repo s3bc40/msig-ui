@@ -83,7 +83,7 @@ export default function HomePage() {
           </p>
           <p className="text-lg">Connect your wallet to get started.</p>
           {isConnected ? (
-            <Link href="/new-safe" className="btn btn-success rounded">
+            <Link href="/new-safe" className="btn btn-primary btn-soft rounded">
               Continue with {address?.slice(0, 6) + "..." + address?.slice(-4)}
             </Link>
           ) : (

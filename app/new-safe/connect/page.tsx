@@ -3,7 +3,9 @@ import BtnBack from "@/app/components/BtnBackHistory";
 export default function ConnectSafePage() {
   return (
     <div className="mx-auto flex min-h-full w-full flex-col items-center gap-6 p-10">
-      <BtnBack />
+      <div className="self-start">
+        <BtnBack />
+      </div>
       <div role="alert" className="alert alert-info">
         <svg
           xmlns="http://www.w3.org/2000/svg"
