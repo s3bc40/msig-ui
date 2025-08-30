@@ -12,66 +12,66 @@ import Link from "next/link";
 // TODO implement protocol kit to connect to safe
 export default function HomePage() {
   const { isConnected, address } = useAccount();
-  const client = useClient();
-  const [safeAddress, setSafeAddress] = useState<string>("");
-  const [submitted, setSubmitted] = useState(false);
-  const [mode, setMode] = useState<"create" | "connect" | null>(null);
-  const [owners, setOwners] = useState<string[]>([""]);
-  const [threshold, setThreshold] = useState<number>(2);
-  const [creating, setCreating] = useState(false);
-  const [safeResult, setSafeResult] = useState<Safe | null>(null);
-  const [error, setError] = useState<string>("");
+  // const client = useClient();
+  // const [safeAddress, setSafeAddress] = useState<string>("");
+  // const [submitted, setSubmitted] = useState(false);
+  // const [mode, setMode] = useState<"create" | "connect" | null>(null);
+  // const [owners, setOwners] = useState<string[]>([""]);
+  // const [threshold, setThreshold] = useState<number>(2);
+  // const [creating, setCreating] = useState(false);
+  // const [safeResult, setSafeResult] = useState<Safe | null>(null);
+  // const [error, setError] = useState<string>("");
 
-  const handleModeSelect = (selected: "create" | "connect") => {
-    setMode(selected);
-    setSafeResult(null);
-    setError("");
-  };
+  // const handleModeSelect = (selected: "create" | "connect") => {
+  //   setMode(selected);
+  //   setSafeResult(null);
+  //   setError("");
+  // };
 
-  const handleOwnerChange = (idx: number, value: string) => {
-    setOwners((prev) => prev.map((o, i) => (i === idx ? value : o)));
-  };
+  // const handleOwnerChange = (idx: number, value: string) => {
+  //   setOwners((prev) => prev.map((o, i) => (i === idx ? value : o)));
+  // };
 
-  const addOwnerField = () => setOwners((prev) => [...prev, ""]);
-  const removeOwnerField = (idx: number) =>
-    setOwners((prev) => prev.filter((_, i) => i !== idx));
+  // const addOwnerField = () => setOwners((prev) => [...prev, ""]);
+  // const removeOwnerField = (idx: number) =>
+  //   setOwners((prev) => prev.filter((_, i) => i !== idx));
 
-  const handleCreateSafe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    setError("");
-    try {
-      // Dummy provider/signer for now
-      const provider = client?.chain.rpcUrls[0].http[0];
-      if (!provider) throw new Error("No provider");
+  // const handleCreateSafe = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setCreating(true);
+  //   setError("");
+  //   try {
+  //     // Dummy provider/signer for now
+  //     const provider = client?.chain.rpcUrls[0].http[0];
+  //     if (!provider) throw new Error("No provider");
 
-      // Create a signer
-      const signer = address;
-      const safeAccountConfig: SafeAccountConfig = {
-        owners: owners.filter((o) => o),
-        threshold,
-      };
-      const safeDeploymentConfig: SafeDeploymentConfig = {
-        saltNonce: Math.floor(Math.random() * 1000000).toString(),
-        safeVersion: "1.4.1",
-        deploymentType: "canonical",
-      };
-      const predictedSafe: PredictedSafeProps = {
-        safeAccountConfig,
-        safeDeploymentConfig,
-      };
-      const protocolKit = await Safe.init({
-        provider,
-        signer,
-        predictedSafe,
-        isL1SafeSingleton: true,
-      });
-      setSafeResult(protocolKit);
-    } catch (err: unknown) {
-      setError((err as Error)?.message || "Failed to create Safe");
-    }
-    setCreating(false);
-  };
+  //     // Create a signer
+  //     const signer = address;
+  //     const safeAccountConfig: SafeAccountConfig = {
+  //       owners: owners.filter((o) => o),
+  //       threshold,
+  //     };
+  //     const safeDeploymentConfig: SafeDeploymentConfig = {
+  //       saltNonce: Math.floor(Math.random() * 1000000).toString(),
+  //       safeVersion: "1.4.1",
+  //       deploymentType: "canonical",
+  //     };
+  //     const predictedSafe: PredictedSafeProps = {
+  //       safeAccountConfig,
+  //       safeDeploymentConfig,
+  //     };
+  //     const protocolKit = await Safe.init({
+  //       provider,
+  //       signer,
+  //       predictedSafe,
+  //       isL1SafeSingleton: true,
+  //     });
+  //     setSafeResult(protocolKit);
+  //   } catch (err: unknown) {
+  //     setError((err as Error)?.message || "Failed to create Safe");
+  //   }
+  //   setCreating(false);
+  // };
 
   return (
     <div className="mx-auto flex min-h-full w-full flex-col items-center justify-center gap-6 p-10">
@@ -83,7 +83,7 @@ export default function HomePage() {
           </p>
           <p className="text-lg">Connect your wallet to get started.</p>
           {isConnected ? (
-            <Link href="/new-safe" className="btn btn-primary rounded">
+            <Link href="/new-safe" className="btn btn-success rounded">
               Continue with {address?.slice(0, 6) + "..." + address?.slice(-4)}
             </Link>
           ) : (
