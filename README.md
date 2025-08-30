@@ -111,7 +111,9 @@ This directory will contain any custom React hooks you create to simplify data r
 
 ## Developer checklist
 
-TODO
+- [ ] Build create safe account flow (Protocol Kit)
+- [ ] Build connect safe account flow (Protocol Kit)
+- [ ] Build create transaction flow
 
 ---
 
