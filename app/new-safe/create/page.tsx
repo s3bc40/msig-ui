@@ -6,11 +6,10 @@ import { useChains } from "wagmi";
 import { type Chain } from "viem";
 import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
-import StepValidate from "./components/StepValidate";
 
 const steps = ["Networks", "Signers & Threshold", "Validate"];
 
-function SafeInfoCard({
+function SafeDetails({
   chains,
   selected,
   signers,
@@ -24,7 +23,7 @@ function SafeInfoCard({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="mb-1 font-semibold">Selected Networks:</p>
+        <p className="mb-1 text-lg font-semibold">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
           {selected.length === 0 ? (
             <span className="badge badge-soft text-base-content">
@@ -34,7 +33,7 @@ function SafeInfoCard({
             selected.map((id) => {
               const net = chains.find((n) => n.id === id);
               return (
-                <span key={id} className="badge badge-accent badge-soft">
+                <span key={id} className="badge badge-secondary badge-outline">
                   {net?.name || id}
                 </span>
               );
@@ -44,33 +43,33 @@ function SafeInfoCard({
       </div>
       <div className="divider my-0" />
       <div>
-        <p className="mb-1 font-semibold">Signers:</p>
+        <p className="mb-1 text-lg font-semibold">Signers:</p>
         {signers.length === 0 || signers.every((s) => !s) ? (
           <div className="alert alert-info">No signers added</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table-zebra table w-full">
-              <tbody>
-                {signers.map((address, idx) =>
-                  address ? (
-                    <tr key={idx}>
-                      <td>{idx + 1}</td>
-                      <td>{address}</td>
-                    </tr>
-                  ) : null,
-                )}
-              </tbody>
-            </table>
+          <div className="flex flex-col gap-2">
+            {signers.map((address, idx) =>
+              address ? (
+                <div
+                  key={idx}
+                  className="bg-base-200 w-full rounded px-2 py-1 font-mono text-sm break-all"
+                >
+                  <span className="mr-2 font-bold">{idx + 1}.</span>
+                  {address}
+                </div>
+              ) : null,
+            )}
           </div>
         )}
       </div>
       <div className="divider my-0" />
       <div>
-        <p className="mb-1 font-semibold">Threshold:</p>
-        <div className="alert alert-success">
-          <span>
-            <b>{threshold}</b> out of <b>{signers.length}</b> signers required
+        <p className="mb-1 text-lg font-semibold">Threshold:</p>
+        <div className="flex flex-wrap items-center gap-2 p-2">
+          <span className="badge badge-success text-base font-bold">
+            {threshold} / {signers.length}
           </span>
+          <span className="text-sm">signers required</span>
         </div>
       </div>
     </div>
@@ -130,13 +129,7 @@ export default function CreateSafePage() {
       onBack={() => setCurrentStep(0)}
       onNext={() => setCurrentStep(2)}
     />,
-    <StepValidate
-      key="validate"
-      onBack={() => setCurrentStep(1)}
-      onConfirm={() => {
-        /* finalize logic */
-      }}
-    />,
+    null,
   ];
 
   return (
@@ -163,21 +156,53 @@ export default function CreateSafePage() {
           ))}
         </ul>
       </div>
-      <div className="grid w-full grid-cols-6 gap-8">
-        {stepContent[currentStep]}
-        {/* Safe Info Card: Display Selected Networks */}
-        <div className="card card-border bg-base-100 card-xl col-span-4 col-start-2 flex flex-col shadow-xl md:col-span-2 md:col-start-auto">
+      {currentStep === 2 ? (
+        <div className="card card-border bg-base-100 card-xl w-full shadow-xl">
           <div className="card-body">
-            <h2 className="card-title">Safe Account Preview</h2>
-            <SafeInfoCard
+            <h2 className="card-title mb-6">Review & Validate Safe Account</h2>
+            <SafeDetails
               chains={chains}
               selected={selectedNetworks}
               signers={signers}
               threshold={threshold}
             />
+            <div className="mt-8 flex justify-between gap-4">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setCurrentStep(1)}
+              >
+                Back to Signers
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  /* finalize logic here */
+                }}
+              >
+                Validate & Create
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="grid w-full grid-cols-6 gap-8">
+          {stepContent[currentStep]}
+          {/* Safe Info Card: Display Selected Networks */}
+          <div className="card card-border bg-base-100 card-xl col-span-4 col-start-2 shadow-xl md:col-span-2 md:col-start-auto">
+            <div className="card-body">
+              <h2 className="card-title">Safe Account Preview</h2>
+              <SafeDetails
+                chains={chains}
+                selected={selectedNetworks}
+                signers={signers}
+                threshold={threshold}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

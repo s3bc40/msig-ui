@@ -68,34 +68,32 @@ export default function StepSigners({
           account. (UI to be implemented)
         </p>
         {/* Owner input fields */}
-        <div className="grid grid-cols-3 gap-2">
-          {signers.map((owner, idx) => (
-            <fieldset key={idx} className="fieldset col-span-2">
-              <legend className="fieldset-legend">Owner {idx + 1}</legend>
-              <div className="flex items-center gap-2">
-                <input
-                  id={`owner-${idx}`}
-                  type="text"
-                  value={owner}
-                  onChange={(e) => handleSignerChange(idx, e.target.value)}
-                  placeholder="0x..."
-                  className={`input ${getInputErrorClass(owner, idx)}`}
-                  pattern="^0x[a-fA-F0-9]{40}$"
-                  required
-                />
-                {signers.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-secondary"
-                    onClick={() => removeSignerField(idx)}
-                  >
-                    -
-                  </button>
-                )}
-              </div>
-            </fieldset>
-          ))}
-        </div>
+        {signers.map((owner, idx) => (
+          <fieldset key={idx} className="fieldset col-span-2">
+            <legend className="fieldset-legend">Owner {idx + 1}</legend>
+            <div className="flex items-center gap-2">
+              <input
+                id={`owner-${idx}`}
+                type="text"
+                value={owner}
+                onChange={(e) => handleSignerChange(idx, e.target.value)}
+                placeholder="0x..."
+                className={`input flex-1 ${getInputErrorClass(owner, idx)}`}
+                pattern="^0x[a-fA-F0-9]{40}$"
+                required
+              />
+              {signers.length > 1 && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-secondary"
+                  onClick={() => removeSignerField(idx)}
+                >
+                  -
+                </button>
+              )}
+            </div>
+          </fieldset>
+        ))}
         {/* Add owner btn */}
         <button
           type="button"
