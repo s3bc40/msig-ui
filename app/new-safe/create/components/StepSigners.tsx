@@ -21,6 +21,44 @@ export default function StepSigners({
   onBack,
   onNext,
 }: StepSignersProps) {
+  // Validation logic
+  const addressPattern = /^0x[a-fA-F0-9]{40}$/;
+  // Check for valid addresses
+  const allSignersValid =
+    signers.length > 0 && signers.every((addr) => addressPattern.test(addr));
+  // Check for duplicates
+  const lowerSigners = signers.map((addr) => addr.toLowerCase());
+  const duplicateIndexes = lowerSigners
+    .map((addr, idx, arr) => (arr.indexOf(addr) !== idx ? idx : -1))
+    .filter((idx) => idx !== -1);
+  const hasDuplicates = duplicateIndexes.length > 0;
+
+  // Helper to determine if input-error should be triggered
+  const getInputErrorClass = (value: string, idx: number) => {
+    if (!value) return "";
+    const isInvalid = !addressPattern.test(value);
+    const isDuplicate = duplicateIndexes.includes(idx);
+    return isInvalid || isDuplicate ? "input-error" : "";
+  };
+
+  // Next button should be disabled if:
+  // - no signers
+  // - at least one signer is not a valid address
+  // - threshold <= 0
+  // - threshold > signers.length
+  const isNextDisabled =
+    signers.length === 0 ||
+    !allSignersValid ||
+    hasDuplicates ||
+    threshold <= 0 ||
+    threshold > signers.length;
+
+  // Remove leading zeros from threshold input
+  const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/^0+/, "");
+    setThreshold(Number(val));
+  };
+
   return (
     <div className="card card-lg card-border bg-base-100 col-span-6 shadow-xl md:col-span-4">
       <div className="card-body gap-8">
@@ -29,42 +67,44 @@ export default function StepSigners({
           Here you will select the signers and set the threshold for your Safe
           account. (UI to be implemented)
         </p>
-        <div className="flex flex-col gap-2">
+        {/* Owner input fields */}
+        <div className="grid grid-cols-3 gap-2">
           {signers.map((owner, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <fieldset className="fieldset w-full">
-                <legend className="fieldset-legend">Owner {idx + 1}</legend>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={owner}
-                    onChange={(e) => handleSignerChange(idx, e.target.value)}
-                    placeholder="0x..."
-                    className="input validator w-full"
-                    pattern="^0x[a-fA-F0-9]{40}$"
-                    required
-                  />
-                  {signers.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-secondary"
-                      onClick={() => removeSignerField(idx)}
-                    >
-                      -
-                    </button>
-                  )}
-                </div>
-              </fieldset>
-            </div>
+            <fieldset key={idx} className="fieldset col-span-2">
+              <legend className="fieldset-legend">Owner {idx + 1}</legend>
+              <div className="flex items-center gap-2">
+                <input
+                  id={`owner-${idx}`}
+                  type="text"
+                  value={owner}
+                  onChange={(e) => handleSignerChange(idx, e.target.value)}
+                  placeholder="0x..."
+                  className={`input ${getInputErrorClass(owner, idx)}`}
+                  pattern="^0x[a-fA-F0-9]{40}$"
+                  required
+                />
+                {signers.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-secondary"
+                    onClick={() => removeSignerField(idx)}
+                  >
+                    -
+                  </button>
+                )}
+              </div>
+            </fieldset>
           ))}
-          <button
-            type="button"
-            className="btn btn-secondary btn-soft w-fit"
-            onClick={addSignerField}
-          >
-            + Add Owner
-          </button>
         </div>
+        {/* Add owner btn */}
+        <button
+          type="button"
+          className="btn btn-secondary btn-soft w-fit"
+          onClick={addSignerField}
+        >
+          + Add Owner
+        </button>
+        {/* Threshold */}
         <fieldset className="fieldset w-full">
           <legend className="fieldset-legend">Threshold</legend>
           <div className="flex items-center gap-2">
@@ -74,7 +114,7 @@ export default function StepSigners({
               max={signers.length}
               step={1}
               value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
+              onChange={handleThresholdChange}
               className="input validator w-fit"
               required
             />
@@ -99,6 +139,7 @@ export default function StepSigners({
             type="button"
             className="btn btn-primary rounded"
             onClick={onNext}
+            disabled={isNextDisabled}
           >
             Next
           </button>

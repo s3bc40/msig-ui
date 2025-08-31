@@ -96,7 +96,7 @@ export default function CreateSafePage() {
 
   // Owners and threshold state
   const [signers, setSigners] = useState<string[]>([""]);
-  const [threshold, setThreshold] = useState<number>(1);
+  const [threshold, setThreshold] = useState<number>(0);
   function addSignerField() {
     setSigners((prev) => [...prev, ""]);
   }
@@ -118,7 +118,6 @@ export default function CreateSafePage() {
       handleCheckbox={handleCheckbox}
       handleReset={handleReset}
       onNext={() => setCurrentStep(1)}
-      disableNext={selectedNetworks.length === 0}
     />,
     <StepSigners
       key="signers"
