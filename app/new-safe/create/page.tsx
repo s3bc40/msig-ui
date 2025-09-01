@@ -1,11 +1,12 @@
 "use client";
 
 import BtnBack from "@/app/components/BtnBackHistory";
-import { useState } from "react";
-import { useChains } from "wagmi";
+import { useState, useEffect } from "react";
+import { useAccount, useChains } from "wagmi";
 import { type Chain } from "viem";
 import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
+import { useSafe } from "@/app/provider/SafeProvider";
 
 const steps = ["Networks", "Signers & Threshold", "Validate"];
 
@@ -78,6 +79,10 @@ function SafeDetails({
 
 export default function CreateSafePage() {
   const chains = useChains();
+  const { address: signer } = useAccount();
+
+  const { safeAddress, isLoading, error, predictSafeAddress, deploySafe } =
+    useSafe();
 
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
@@ -132,6 +137,62 @@ export default function CreateSafePage() {
     null,
   ];
 
+  // Modal state for deployment progress
+  const [showModal, setShowModal] = useState(false);
+  const [deployStatus, setDeployStatus] = useState<Record<number, string>>({});
+  const [deploying, setDeploying] = useState(false);
+  const [deployError, setDeployError] = useState<string | null>(null);
+
+  // Predict Safe address when entering validation step
+  useEffect(() => {
+    if (
+      currentStep === 2 &&
+      selectedNetworks.length > 0 &&
+      signers.length > 0 &&
+      threshold > 0
+    ) {
+      predictSafeAddress(
+        chains.filter((c) => selectedNetworks.includes(c.id)),
+        {
+          owners: signers,
+          threshold,
+          signer,
+        },
+      );
+    }
+  }, [
+    currentStep,
+    selectedNetworks,
+    signers,
+    threshold,
+    chains,
+    predictSafeAddress,
+    signer,
+  ]);
+
+  // Deploy Safe on all selected chains
+  async function handleDeploySafe() {
+    setShowModal(true);
+    setDeploying(true);
+    setDeployStatus({});
+    setDeployError(null);
+    try {
+      const txs = await deploySafe(
+        chains.filter((c) => selectedNetworks.includes(c.id)),
+        {
+          owners: signers,
+          threshold,
+          signer,
+        },
+      );
+      setDeployStatus(txs);
+    } catch (e) {
+      setDeployError(e instanceof Error ? e.message : "Deployment failed");
+    } finally {
+      setDeploying(false);
+    }
+  }
+
   return (
     <div className="flex w-full flex-col gap-12 p-10">
       <div className="grid w-full grid-cols-6 items-center">
@@ -157,35 +218,98 @@ export default function CreateSafePage() {
         </ul>
       </div>
       {currentStep === 2 ? (
-        <div className="card card-border bg-base-100 card-xl w-full shadow-xl">
-          <div className="card-body">
-            <h2 className="card-title mb-6">Review & Validate Safe Account</h2>
-            <SafeDetails
-              chains={chains}
-              selected={selectedNetworks}
-              signers={signers}
-              threshold={threshold}
-            />
-            <div className="mt-8 flex justify-between gap-4">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setCurrentStep(1)}
-              >
-                Back to Signers
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  /* finalize logic here */
-                }}
-              >
-                Validate & Create
-              </button>
+        <>
+          <div className="card card-border bg-base-100 card-xl w-full shadow-xl">
+            <div className="card-body">
+              <h2 className="card-title mb-6">
+                Review & Validate Safe Account
+              </h2>
+              <SafeDetails
+                chains={chains}
+                selected={selectedNetworks}
+                signers={signers}
+                threshold={threshold}
+              />
+              <div className="mt-8 flex flex-col gap-4">
+                {isLoading && (
+                  <div className="flex items-center gap-2">
+                    <span className="loading loading-spinner loading-md" />
+                    <span>Predicting Safe address...</span>
+                  </div>
+                )}
+                {safeAddress && (
+                  <div className="alert alert-success">
+                    <span>Predicted Safe address: </span>
+                    <span className="font-mono">{safeAddress}</span>
+                  </div>
+                )}
+                {error && <div className="alert alert-error">{error}</div>}
+                <div className="flex justify-between gap-4">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setCurrentStep(1)}
+                  >
+                    Back to Signers
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!safeAddress || isLoading || deploying}
+                    onClick={handleDeploySafe}
+                  >
+                    {deploying ? "Deploying..." : "Validate & Create"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+          {/* Global Modal for deployment progress */}
+          {showModal && (
+            <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black">
+              <div className="modal-box w-full max-w-lg">
+                <h3 className="mb-4 text-lg font-bold">
+                  Safe Deployment Progress
+                </h3>
+                <ul className="mb-4">
+                  {selectedNetworks.map((id) => {
+                    const net = chains.find((c) => c.id === id);
+                    return (
+                      <li key={id} className="mb-2">
+                        <span className="font-semibold">
+                          {net?.name || id}:
+                        </span>
+                        {deploying ? (
+                          <span className="loading loading-spinner loading-xs ml-2" />
+                        ) : deployStatus[id] ? (
+                          <span className="text-success ml-2">
+                            Tx Hash: {deployStatus[id]}
+                          </span>
+                        ) : (
+                          <span className="text-error ml-2">
+                            Error or not started
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {deployError && (
+                  <div className="alert alert-error mb-2">{deployError}</div>
+                )}
+                <div className="modal-action">
+                  <button
+                    className="btn"
+                    onClick={() => setShowModal(false)}
+                    disabled={deploying}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="grid w-full grid-cols-6 gap-8">
           {stepContent[currentStep]}
