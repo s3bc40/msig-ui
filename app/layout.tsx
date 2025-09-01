@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./provider";
-import Link from "next/link";
+import { Providers } from "./provider/providers";
 import NavBar from "./components/NavBar";
-import SideBar from "./components/SideBar";
 // DaisyUI Navbar, Footer, and Drawer will be used instead of custom Navbar
 
 const roboto = Roboto({
