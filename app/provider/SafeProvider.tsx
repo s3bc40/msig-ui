@@ -23,7 +23,13 @@ import { waitForTransactionReceipt } from "viem/actions";
 import { useAccount } from "wagmi";
 import { Chain } from "viem";
 
-interface SafeContextType {
+export type SafeDeployStep = {
+  status: "pending" | "txSent" | "confirmed" | "deployed" | "error";
+  txHash?: string;
+  error?: string;
+};
+
+export interface SafeContextType {
   protocolKits: Record<number, Safe | null>; // chainId -> ProtocolKit
   safeAddress: string | null; // Canonical Safe address
   isLoading: boolean;
@@ -32,12 +38,15 @@ interface SafeContextType {
     selectedChain: Chain[],
     owners: `0x${string}`[],
     threshold: number,
+    saltNonce?: string,
   ) => Promise<`0x${string}`>;
   deploySafe: (
     selectedChain: Chain[],
     owners: `0x${string}`[],
     threshold: number,
-  ) => Promise<Record<number, string>>;
+    saltNonce?: string,
+    onStatusUpdate?: (chainId: number, step: SafeDeployStep) => void,
+  ) => Promise<Record<number, SafeDeployStep>>;
   resetSafe: () => void;
 }
 
@@ -79,6 +88,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       selectedChain: Chain[],
       owners: `0x${string}`[],
       threshold: number,
+      saltNonce?: string,
     ) => {
       setIsLoading(true);
       setError(null);
@@ -94,6 +104,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
                 owners,
                 threshold,
               },
+              safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
             },
             contractNetworks: localContractNetworks,
           };
@@ -112,6 +123,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       } finally {
         setIsLoading(false);
       }
+      console.log("Predicted Safe address:", canonicalAddress);
       return canonicalAddress as `0x${string}`;
     },
     [signer],
@@ -125,10 +137,12 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       selectedChain: Chain[],
       owners: `0x${string}`[],
       threshold: number,
+      saltNonce?: string,
+      onStatusUpdate?: (chainId: number, step: SafeDeployStep) => void,
     ) => {
       setIsLoading(true);
       setError(null);
-      const txHashes: Record<number, string> = {};
+      const status: Record<number, SafeDeployStep> = {};
       try {
         for (const chain of selectedChain) {
           let kit = protocolKits[chain.id];
@@ -141,48 +155,73 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
                   owners,
                   threshold,
                 },
+                safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
               },
               contractNetworks: localContractNetworks,
             };
             kit = await Safe.init(config);
           }
-          // 1. Create deployment transaction
-          const deploymentTx = await kit.createSafeDeploymentTransaction();
-          // 2. Get external signer
-          const client = await kit.getSafeProvider().getExternalSigner();
-          // 3. Send transaction
-          const txHash = await client!.sendTransaction({
-            to: deploymentTx.to as `0x${string}`,
-            value: BigInt(deploymentTx.value),
-            data: deploymentTx.data as `0x${string}`,
-            chain: chain,
-          });
-          txHashes[chain.id] = txHash || "";
-          // 4. Wait for receipt
-          if (txHash) {
-            await waitForTransactionReceipt(client!, { hash: txHash });
+          // 1. Pending
+          console.log("Deploying Safe on chain:", chain.name);
+          status[chain.id] = { status: "pending" };
+          onStatusUpdate?.(chain.id, status[chain.id]);
+          try {
+            console.log("Creating deployment transaction...");
+            // 2. Create deployment transaction
+            // let deploymentTx;
+            const deploymentTx = await kit.createSafeDeploymentTransaction();
+            // 3. Get external signer
+            const client = await kit.getSafeProvider().getExternalSigner();
+            console.log("Sending deployment transaction...");
+            // 4. Send transaction
+            const txHash = await client!.sendTransaction({
+              to: deploymentTx.to as `0x${string}`,
+              value: BigInt(deploymentTx.value),
+              data: deploymentTx.data as `0x${string}`,
+              chain: chain,
+            });
+            console.log("Transaction sent with hash:", txHash);
+            status[chain.id] = { status: "txSent", txHash };
+            onStatusUpdate?.(chain.id, status[chain.id]);
+            // 5. Wait for receipt
+            console.log("Waiting for transaction confirmation...");
+            if (txHash) {
+              await waitForTransactionReceipt(client!, { hash: txHash });
+              status[chain.id] = { status: "confirmed", txHash };
+              onStatusUpdate?.(chain.id, status[chain.id]);
+            }
+            console.log(
+              "Transaction confirmed. Connecting to deployed Safe...",
+            );
+            // 6. Connect to deployed Safe
+            const safeAddress = await kit.getAddress();
+            const newKit = await kit.connect({
+              safeAddress,
+            });
+            // 7. Check deployment status
+            console.log("Verifying Safe deployment...");
+            await newKit.isSafeDeployed();
+            // 8. Deployed
+            status[chain.id] = { status: "deployed", txHash };
+            onStatusUpdate?.(chain.id, status[chain.id]);
+            // Update protocolKits with newKit
+            console.log("Safe deployed at address:", safeAddress);
+            protocolKits[chain.id] = newKit;
+            setProtocolKits({ ...protocolKits });
+          } catch (e: unknown) {
+            status[chain.id] = {
+              status: "error",
+              error: e instanceof Error ? e.message : "Failed to deploy Safe",
+            };
+            onStatusUpdate?.(chain.id, status[chain.id]);
           }
-          // 5. Connect to deployed Safe
-          const safeAddress = await kit.getAddress();
-          const newKit = await kit.connect({
-            safeAddress,
-          });
-          // Check deployment status
-          await newKit.isSafeDeployed();
-          // Update protocolKits with newKit
-          protocolKits[chain.id] = newKit;
-          setProtocolKits({ ...protocolKits });
         }
       } catch (e: unknown) {
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError("Failed to deploy Safe");
-        }
+        setError(e instanceof Error ? e.message : "Failed to deploy Safe");
       } finally {
         setIsLoading(false);
       }
-      return txHashes;
+      return status;
     },
     [protocolKits, signer],
   );

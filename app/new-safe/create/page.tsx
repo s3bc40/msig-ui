@@ -6,7 +6,7 @@ import { useAccount, useChains } from "wagmi";
 import { type Chain } from "viem";
 import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
-import { useSafe } from "@/app/provider/SafeProvider";
+import { useSafe, SafeDeployStep } from "@/app/provider/SafeProvider";
 
 const steps = ["Networks", "Signers & Threshold", "Validate"];
 
@@ -22,7 +22,7 @@ function SafeDetails({
   threshold: number;
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
         <p className="mb-1 text-lg font-semibold">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
@@ -83,6 +83,9 @@ export default function CreateSafePage() {
 
   const { isLoading, error, predictSafeAddress, deploySafe } = useSafe();
 
+  // Error separation
+  const [predictError, setPredictError] = useState<string | null>(null);
+
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -130,6 +133,11 @@ export default function CreateSafePage() {
     `0x${string}` | null
   >(null);
 
+  // Salt nonce for Safe creation (number string for SDK compatibility)
+  const [saltNonce, setSaltNonce] = useState<string>(() => {
+    return Date.now().toString();
+  });
+
   // Ref to cache last-used params and address
   const lastPredictionRef = useRef<{
     networks: number[];
@@ -168,8 +176,10 @@ export default function CreateSafePage() {
   ];
 
   // Modal state for deployment progress
-  const [showModal, setShowModal] = useState(false);
-  const [deployStatus, setDeployStatus] = useState<Record<number, string>>({});
+  // DaisyUI modal uses dialog element, so we don't need showModal state
+  const [deployStatus, setDeployStatus] = useState<
+    Record<number, SafeDeployStep>
+  >({});
   const [deploying, setDeploying] = useState(false);
   const [deployError, setDeployError] = useState<string | null>(null);
 
@@ -193,21 +203,29 @@ export default function CreateSafePage() {
         lastPredictionRef.current.threshold !== threshold;
       if (paramsChanged) {
         setSafePredictedAddress(null);
+        setPredictError(null);
         const fetchPredictedAddress = async () => {
-          const predictedAddress = await predictSafeAddress(
-            selectedNetworks
-              .map((id) => chains.find((c) => c.id === id)!)
-              .filter(Boolean),
-            validSigners,
-            threshold,
-          );
-          setSafePredictedAddress(predictedAddress);
-          lastPredictionRef.current = {
-            networks: [...selectedNetworks],
-            signers: [...signers],
-            threshold,
-            address: predictedAddress,
-          };
+          try {
+            const predictedAddress = await predictSafeAddress(
+              selectedNetworks
+                .map((id) => chains.find((c) => c.id === id)!)
+                .filter(Boolean),
+              validSigners,
+              threshold,
+              saltNonce,
+            );
+            setSafePredictedAddress(predictedAddress);
+            lastPredictionRef.current = {
+              networks: [...selectedNetworks],
+              signers: [...signers],
+              threshold,
+              address: predictedAddress,
+            };
+          } catch (e) {
+            setPredictError(
+              e instanceof Error ? e.message : "Prediction failed",
+            );
+          }
         };
         fetchPredictedAddress();
       } else {
@@ -223,11 +241,18 @@ export default function CreateSafePage() {
     chains,
     predictSafeAddress,
     signer,
+    saltNonce,
   ]);
 
   // Deploy Safe on all selected chains
   async function handleDeploySafe() {
-    setShowModal(true);
+    // Open DaisyUI modal
+    const modal = document.getElementById(
+      "safe_deploy_modal",
+    ) as HTMLDialogElement | null;
+    if (modal) {
+      modal.showModal();
+    }
     setDeploying(true);
     setDeployStatus({});
     setDeployError(null);
@@ -236,12 +261,18 @@ export default function CreateSafePage() {
       const validSigners = signers.filter((s): s is `0x${string}` =>
         /^0x[a-fA-F0-9]{40}$/.test(s),
       );
+      const status: Record<number, SafeDeployStep> = {};
       const txs = await deploySafe(
         selectedNetworks
           .map((id) => chains.find((c) => c.id === id)!)
           .filter(Boolean),
         validSigners,
         threshold,
+        saltNonce,
+        (chainId, step) => {
+          status[chainId] = step;
+          setDeployStatus((prev) => ({ ...prev, [chainId]: step }));
+        },
       );
       setDeployStatus(txs);
     } catch (e) {
@@ -288,7 +319,8 @@ export default function CreateSafePage() {
                 signers={signers}
                 threshold={threshold}
               />
-              <div className="mt-8 flex flex-col gap-4">
+              <div className="divider my-0" />
+              <div className="flex flex-col gap-4">
                 {isLoading && (
                   <div className="flex items-center gap-2">
                     <span className="loading loading-spinner loading-md" />
@@ -296,12 +328,21 @@ export default function CreateSafePage() {
                   </div>
                 )}
                 {safePredictedAddress && (
-                  <div className="alert alert-success">
-                    <span>Predicted Safe address: </span>
-                    <span className="font-mono">{safePredictedAddress}</span>
+                  <div>
+                    <p className="mb-1 text-lg font-semibold">
+                      Predicted Safe Address:
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 p-2">
+                      <span className="badge badge-success badge-outline text-base break-all">
+                        {safePredictedAddress}
+                      </span>
+                    </div>
                   </div>
                 )}
-                {error && <div className="alert alert-error">{error}</div>}
+                {predictError && (
+                  <div className="alert alert-error">{predictError}</div>
+                )}
+                <div className="mt-8" />
                 <div className="flex justify-between gap-4">
                   <button
                     type="button"
@@ -322,51 +363,92 @@ export default function CreateSafePage() {
               </div>
             </div>
           </div>
-          {/* Global Modal for deployment progress */}
-          {showModal && (
-            <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black">
-              <div className="modal-box w-full max-w-lg">
-                <h3 className="mb-4 text-lg font-bold">
-                  Safe Deployment Progress
-                </h3>
-                <ul className="mb-4">
-                  {selectedNetworks.map((id) => {
-                    const net = chains.find((c) => c.id === id);
-                    return (
-                      <li key={id} className="mb-2">
-                        <span className="font-semibold">
-                          {net?.name || id}:
-                        </span>
-                        {deploying ? (
-                          <span className="loading loading-spinner loading-xs ml-2" />
-                        ) : deployStatus[id] ? (
-                          <span className="text-success ml-2">
-                            Tx Hash: {deployStatus[id]}
-                          </span>
-                        ) : (
-                          <span className="text-error ml-2">
-                            Error or not started
-                          </span>
+          {/* DaisyUI Modal for deployment progress */}
+          <dialog
+            id="safe_deploy_modal"
+            className="modal modal-bottom sm:modal-middle"
+          >
+            <div className="modal-box">
+              <h3 className="mb-4 text-lg font-bold">
+                Safe Deployment Progress
+              </h3>
+              <ul className="mb-4">
+                {selectedNetworks.map((id) => {
+                  const net = chains.find((c) => c.id === id);
+                  const step = deployStatus[id];
+                  // DaisyUI stepper stages
+                  const stages = [
+                    { label: "Pending", key: "pending" },
+                    { label: "Tx Sent", key: "txSent" },
+                    { label: "Confirmed", key: "confirmed" },
+                    { label: "Deployed", key: "deployed" },
+                  ];
+                  // Find current step index
+                  const currentIdx = step
+                    ? stages.findIndex((s) => s.key === step.status)
+                    : -1;
+                  return (
+                    <li key={id} className="mb-6">
+                      <span className="font-semibold">{net?.name || id}:</span>
+                      <ul className="steps steps-vertical mt-2 w-full">
+                        {stages.map((stage, idx) => (
+                          <li
+                            key={stage.key}
+                            className={
+                              "step text-xs" +
+                              (currentIdx > idx
+                                ? " step-success"
+                                : currentIdx === idx
+                                  ? step?.status === "error"
+                                    ? " step-error"
+                                    : " step-primary"
+                                  : "")
+                            }
+                          >
+                            {stage.label}
+                            {/* Show spinner for current step if pending/txSent */}
+                            {currentIdx === idx &&
+                              (step?.status === "pending" ||
+                                step?.status === "txSent") && (
+                                <span className="loading loading-spinner loading-xs ml-2" />
+                              )}
+                            {/* Show txHash for txSent/confirmed/deployed */}
+                            {step?.txHash && idx >= 1 && currentIdx >= idx && (
+                              <span className="badge badge-info badge-outline badge-xs ml-2">
+                                Tx: {step.txHash}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                        {/* Error step */}
+                        {step?.status === "error" && (
+                          <li className="alert alert-error text-xs">
+                            Error
+                            {step.error && <span>{step.error}</span>}
+                          </li>
                         )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {deployError && (
-                  <div className="alert alert-error mb-2">{deployError}</div>
-                )}
-                <div className="modal-action">
-                  <button
-                    className="btn"
-                    onClick={() => setShowModal(false)}
-                    disabled={deploying}
-                  >
+                        {/* Not started */}
+                        {!step && <li className="step text-xs">Not started</li>}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+              {deployError && (
+                <div className="alert alert-error mb-2">{deployError}</div>
+              )}
+              <div className="modal-action">
+                <form method="dialog">
+                  <button className="btn" disabled={deploying}>
                     Close
                   </button>
-                </div>
+                </form>
               </div>
             </div>
-          )}
+            <form method="dialog" className="modal-backdrop">
+              <button>close</button>
+            </form>
+          </dialog>
         </>
       ) : (
         <div className="grid w-full grid-cols-6 gap-8">

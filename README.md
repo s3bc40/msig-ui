@@ -117,6 +117,59 @@ This directory will contain any custom React hooks you create to simplify data r
 
 ---
 
+## Deploying Safe Contracts Locally with `safe-smart-account`
+
+To run your own local Safe contracts for development, follow these steps:
+
+1. **Clone the Repository**
+
+   ```sh
+   git clone https://github.com/safe-global/safe-smart-account.git
+   cd safe-smart-account
+   ```
+
+2. **Checkout the Correct Version**
+   - Switch to the tag for version 1.4.1 contracts:
+     ```sh
+     git checkout tags/v1.4.1-3
+     ```
+
+3. **Install Dependencies and Build**
+
+   ```sh
+   npm install
+   npm run build
+   ```
+
+4. **Start a Local Anvil Node**
+   - You can use Foundry’s Anvil or Hardhat’s local node. For Anvil:
+     ```sh
+     anvil
+     ```
+   - (Or start your preferred local Ethereum node.)
+
+5. **Create a `.env` File**
+   - In the root of the `safe-smart-account` repo, create a `.env` file with the following contents:
+     ```ini
+     MNEMONIC="test test test test test test test test test test test junk"
+     NODE_URL="http://127.0.0.1:8545"
+     ```
+
+6. **Deploy Contracts**
+   - In a separate terminal, run:
+     ```sh
+     npx hardhat --network custom deploy
+     ```
+   - This will deploy all Safe contracts to your local network.
+
+7. **Update Contract Addresses**
+   - After deployment, copy the contract addresses from the output and update them in your project’s `localContractNetworks.ts` file.
+
+> **Note:**
+> Currently, contract addresses are manually maintained in `localContractNetworks.ts`. In the future, we may automate this process or use environment variables for better flexibility.
+
+---
+
 ## References
 
 [SafeSDK: Protocol Kit](https://docs.safe.global/sdk/protocol-kit)
