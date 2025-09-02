@@ -1,7 +1,7 @@
 "use client";
 
 import BtnBack from "@/app/components/BtnBackHistory";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, useChains } from "wagmi";
 import { type Chain } from "viem";
 import StepNetworks from "./components/StepNetworks";
@@ -27,7 +27,7 @@ function SafeDetails({
         <p className="mb-1 text-lg font-semibold">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
           {selected.length === 0 ? (
-            <span className="badge badge-soft text-base-content">
+            <span className="badge badge-outline text-base-content">
               None selected
             </span>
           ) : (
@@ -46,7 +46,7 @@ function SafeDetails({
       <div>
         <p className="mb-1 text-lg font-semibold">Signers:</p>
         {signers.length === 0 || signers.every((s) => !s) ? (
-          <div className="alert alert-info">No signers added</div>
+          <div className="badge badge-outline">No signers added</div>
         ) : (
           <div className="flex flex-col gap-2">
             {signers.map((address, idx) =>
@@ -81,8 +81,7 @@ export default function CreateSafePage() {
   const chains = useChains();
   const { address: signer } = useAccount();
 
-  const { safeAddress, isLoading, error, predictSafeAddress, deploySafe } =
-    useSafe();
+  const { isLoading, error, predictSafeAddress, deploySafe } = useSafe();
 
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
@@ -98,9 +97,19 @@ export default function CreateSafePage() {
     setSelectedNetworks([]);
   }
 
-  // Owners and threshold state
+  // Owners state with auto-fill of connected wallet
   const [signers, setSigners] = useState<string[]>([""]);
-  const [threshold, setThreshold] = useState<number>(0);
+  useEffect(() => {
+    if (signer) {
+      setSigners((prev) => {
+        // Replace first entry with new signer, keep others
+        if (prev.length === 0) return [signer];
+        if (prev[0] !== signer) return [signer, ...prev.slice(1)];
+        return prev;
+      });
+    }
+  }, [signer]);
+  // Helpers to manage dynamic signer fields
   function addSignerField() {
     setSigners((prev) => [...prev, ""]);
   }
@@ -112,6 +121,27 @@ export default function CreateSafePage() {
       prevSigners.map((owner, idx) => (idx === signerIdx ? value : owner)),
     );
   }
+
+  // Threshold state
+  const [threshold, setThreshold] = useState<number>(1);
+
+  // Predicted Safe address state
+  const [safePredictedAddress, setSafePredictedAddress] = useState<
+    `0x${string}` | null
+  >(null);
+
+  // Ref to cache last-used params and address
+  const lastPredictionRef = useRef<{
+    networks: number[];
+    signers: string[];
+    threshold: number;
+    address: `0x${string}` | null;
+  }>({
+    networks: [],
+    signers: [],
+    threshold: 1,
+    address: null,
+  });
 
   // Step content as components
   const stepContent = [
@@ -148,17 +178,42 @@ export default function CreateSafePage() {
     if (
       currentStep === 2 &&
       selectedNetworks.length > 0 &&
-      signers.length > 0 &&
+      signers.filter(Boolean).length > 0 &&
       threshold > 0
     ) {
-      predictSafeAddress(
-        chains.filter((c) => selectedNetworks.includes(c.id)),
-        {
-          owners: signers,
-          threshold,
-          signer,
-        },
+      // Only pass valid addresses to SDK
+      const validSigners = signers.filter((s): s is `0x${string}` =>
+        /^0x[a-fA-F0-9]{40}$/.test(s),
       );
+      // Compare current params to lastPredictionRef
+      const paramsChanged =
+        lastPredictionRef.current.networks.join(",") !==
+          selectedNetworks.join(",") ||
+        lastPredictionRef.current.signers.join(",") !== signers.join(",") ||
+        lastPredictionRef.current.threshold !== threshold;
+      if (paramsChanged) {
+        setSafePredictedAddress(null);
+        const fetchPredictedAddress = async () => {
+          const predictedAddress = await predictSafeAddress(
+            selectedNetworks
+              .map((id) => chains.find((c) => c.id === id)!)
+              .filter(Boolean),
+            validSigners,
+            threshold,
+          );
+          setSafePredictedAddress(predictedAddress);
+          lastPredictionRef.current = {
+            networks: [...selectedNetworks],
+            signers: [...signers],
+            threshold,
+            address: predictedAddress,
+          };
+        };
+        fetchPredictedAddress();
+      } else {
+        // Params unchanged, reuse cached address
+        setSafePredictedAddress(lastPredictionRef.current.address);
+      }
     }
   }, [
     currentStep,
@@ -177,13 +232,16 @@ export default function CreateSafePage() {
     setDeployStatus({});
     setDeployError(null);
     try {
+      // Only pass valid addresses to SDK
+      const validSigners = signers.filter((s): s is `0x${string}` =>
+        /^0x[a-fA-F0-9]{40}$/.test(s),
+      );
       const txs = await deploySafe(
-        chains.filter((c) => selectedNetworks.includes(c.id)),
-        {
-          owners: signers,
-          threshold,
-          signer,
-        },
+        selectedNetworks
+          .map((id) => chains.find((c) => c.id === id)!)
+          .filter(Boolean),
+        validSigners,
+        threshold,
       );
       setDeployStatus(txs);
     } catch (e) {
@@ -237,10 +295,10 @@ export default function CreateSafePage() {
                     <span>Predicting Safe address...</span>
                   </div>
                 )}
-                {safeAddress && (
+                {safePredictedAddress && (
                   <div className="alert alert-success">
                     <span>Predicted Safe address: </span>
-                    <span className="font-mono">{safeAddress}</span>
+                    <span className="font-mono">{safePredictedAddress}</span>
                   </div>
                 )}
                 {error && <div className="alert alert-error">{error}</div>}
@@ -255,7 +313,7 @@ export default function CreateSafePage() {
                   <button
                     type="button"
                     className="btn btn-primary"
-                    disabled={!safeAddress || isLoading || deploying}
+                    disabled={!safePredictedAddress || isLoading || deploying}
                     onClick={handleDeploySafe}
                   >
                     {deploying ? "Deploying..." : "Validate & Create"}

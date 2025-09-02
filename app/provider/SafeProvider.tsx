@@ -1,3 +1,5 @@
+"user client";
+
 /**
  * SafeProvider Context for Safe ProtocolKit SDK
  *
@@ -16,19 +18,25 @@ import React, {
   useCallback,
 } from "react";
 import Safe, { SafeConfig } from "@safe-global/protocol-kit";
-// import { Chain } from "viem";
-import { Chain } from "viem";
+import { localContractNetworks } from "./localContractNetworks";
 import { waitForTransactionReceipt } from "viem/actions";
+import { useAccount } from "wagmi";
+import { Chain } from "viem";
 
 interface SafeContextType {
   protocolKits: Record<number, Safe | null>; // chainId -> ProtocolKit
   safeAddress: string | null; // Canonical Safe address
   isLoading: boolean;
   error: string | null;
-  predictSafeAddress: (chains: Chain[], config: SafeConfig) => Promise<string>;
+  predictSafeAddress: (
+    selectedChain: Chain[],
+    owners: `0x${string}`[],
+    threshold: number,
+  ) => Promise<`0x${string}`>;
   deploySafe: (
-    chains: Chain[],
-    config: SafeConfig,
+    selectedChain: Chain[],
+    owners: `0x${string}`[],
+    threshold: number,
   ) => Promise<Record<number, string>>;
   resetSafe: () => void;
 }
@@ -38,6 +46,8 @@ const SafeContext = createContext<SafeContextType | undefined>(undefined);
 export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { address: signer } = useAccount();
+
   // Store ProtocolKit instances per chain
   const [protocolKits, setProtocolKits] = useState<Record<number, Safe | null>>(
     {},
@@ -65,23 +75,34 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
    * Predict Safe address for all selected chains, but store/display only one canonical address
    */
   const predictSafeAddress = useCallback(
-    async (chains: Chain[], config: SafeConfig) => {
+    async (
+      selectedChain: Chain[],
+      owners: `0x${string}`[],
+      threshold: number,
+    ) => {
       setIsLoading(true);
       setError(null);
       const kits: Record<number, Safe | null> = {};
       let canonicalAddress: string = "";
       try {
-        for (const chain of chains) {
-          const kit = await Safe.init({
-            ...config,
+        for (const chain of selectedChain) {
+          const config: SafeConfig = {
             provider: chain.rpcUrls.default.http[0],
-          });
+            signer,
+            predictedSafe: {
+              safeAccountConfig: {
+                owners,
+                threshold,
+              },
+            },
+            contractNetworks: localContractNetworks,
+          };
+          const kit = await Safe.init(config);
           kits[chain.id] = kit;
           const addr = await kit.getAddress();
           if (!canonicalAddress) canonicalAddress = addr;
         }
         setProtocolKits(kits);
-        setSafeAddress(canonicalAddress);
       } catch (e: unknown) {
         if (e instanceof Error) {
           setError(e.message);
@@ -91,27 +112,39 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       } finally {
         setIsLoading(false);
       }
-      return canonicalAddress;
+      return canonicalAddress as `0x${string}`;
     },
-    [],
+    [signer],
   );
 
   /**
    * Deploy Safe on each selected chain
    */
   const deploySafe = useCallback(
-    async (chains: Chain[], config: SafeConfig) => {
+    async (
+      selectedChain: Chain[],
+      owners: `0x${string}`[],
+      threshold: number,
+    ) => {
       setIsLoading(true);
       setError(null);
       const txHashes: Record<number, string> = {};
       try {
-        for (const chain of chains) {
+        for (const chain of selectedChain) {
           let kit = protocolKits[chain.id];
           if (!kit) {
-            kit = await Safe.init({
-              ...config,
+            const config: SafeConfig = {
               provider: chain.rpcUrls.default.http[0],
-            });
+              signer,
+              predictedSafe: {
+                safeAccountConfig: {
+                  owners,
+                  threshold,
+                },
+              },
+              contractNetworks: localContractNetworks,
+            };
+            kit = await Safe.init(config);
           }
           // 1. Create deployment transaction
           const deploymentTx = await kit.createSafeDeploymentTransaction();
@@ -151,7 +184,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return txHashes;
     },
-    [protocolKits],
+    [protocolKits, signer],
   );
 
   const resetSafe = useCallback(() => {
