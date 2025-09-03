@@ -1,4 +1,4 @@
-"user client";
+"use client";
 
 /**
  * SafeProvider Context for Safe ProtocolKit SDK
@@ -18,30 +18,22 @@ import React, {
   useCallback,
 } from "react";
 import Safe, { SafeConfig } from "@safe-global/protocol-kit";
-import { localContractNetworks } from "./localContractNetworks";
+import {
+  getMinimalEIP1193Provider,
+  createSafeConfig,
+  updateStep,
+} from "./helpers";
+import { SafeDeployStep } from "./types";
 import { waitForTransactionReceipt } from "viem/actions";
 import { useAccount } from "wagmi";
 import { Chain } from "viem";
 
-// --- Types ---
-export type SafeDeployStep = {
-  step: "txCreated" | "txSent" | "confirmed" | "deployed";
-  status: "idle" | "running" | "success" | "error";
-  txHash?: string;
-  error?: string;
-};
-
-// Reduce 'any' usage: cast rawProvider once, use proper types in wrapper
-type MinimalEIP1193Provider = {
-  request: (args: unknown) => Promise<unknown>;
-  on?: (...args: unknown[]) => void;
-  removeListener?: (...args: unknown[]) => void;
-};
-
+// -- Interfaces and Context --
 export interface SafeContextType {
   protocolKits: Record<number, Safe | null>; // chainId -> ProtocolKit
   safeAddress: string | null;
-  isLoading: boolean;
+  isPredicting: boolean;
+  isDeploying: boolean;
   error: string | null;
   predictSafeAddress: (
     chain: Chain,
@@ -63,6 +55,7 @@ export interface SafeContextType {
 
 const SafeContext = createContext<SafeContextType | undefined>(undefined);
 
+// -- Provider Component --
 export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -73,7 +66,8 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
     {},
   );
   const [safeAddress, setSafeAddress] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
@@ -103,30 +97,24 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       threshold: number,
       saltNonce?: string,
     ) => {
-      setIsLoading(true);
+      setIsPredicting(true);
       setError(null);
       let kit: Safe | null = null;
       let addr: string = "";
-      const rawProvider = await connector?.getProvider();
-      const baseProvider = rawProvider as MinimalEIP1193Provider;
-      const provider: MinimalEIP1193Provider = {
-        request: baseProvider.request,
-        on: baseProvider.on,
-        removeListener: baseProvider.removeListener,
-      };
+      const provider = await getMinimalEIP1193Provider(connector);
+      if (!provider) {
+        setError("Provider not available");
+        setIsPredicting(false);
+        return "" as `0x${string}`;
+      }
       try {
-        const config: SafeConfig = {
+        const config: SafeConfig = createSafeConfig(
           provider,
           signer,
-          predictedSafe: {
-            safeAccountConfig: {
-              owners,
-              threshold,
-            },
-            safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
-          },
-          contractNetworks: localContractNetworks,
-        };
+          owners,
+          threshold,
+          saltNonce,
+        );
         console.log("Predicting Safe address with config:", config);
         kit = await Safe.init(config);
         addr = await kit.getAddress();
@@ -136,7 +124,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
           e instanceof Error ? e.message : "Failed to predict Safe address",
         );
       } finally {
-        setIsLoading(false);
+        setIsPredicting(false);
       }
       setSafeAddress(addr);
       return addr as `0x${string}`;
@@ -155,7 +143,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       saltNonce?: string,
       onStatusUpdate?: (steps: SafeDeployStep[]) => void,
     ) => {
-      setIsLoading(true);
+      setIsDeploying(true);
       setError(null);
       setDeployError(null);
       setDeployTxHash(null);
@@ -165,54 +153,44 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
         { step: "confirmed", status: "idle" },
         { step: "deployed", status: "idle" },
       ];
-      const rawProvider = await connector?.getProvider();
-      const baseProvider = rawProvider as MinimalEIP1193Provider;
-      const provider: MinimalEIP1193Provider = {
-        request: baseProvider.request,
-        on: baseProvider.on,
-        removeListener: baseProvider.removeListener,
-      };
+      const provider = await getMinimalEIP1193Provider(connector);
+      if (!provider) {
+        setError("Provider not available");
+        setIsDeploying(false);
+        updateStep(steps, 0, "error", onStatusUpdate, "Provider not available");
+        return steps;
+      }
       try {
         let kit = protocolKits[chain.id];
         if (!kit) {
-          const config: SafeConfig = {
+          const config: SafeConfig = createSafeConfig(
             provider,
             signer,
-            predictedSafe: {
-              safeAccountConfig: {
-                owners,
-                threshold,
-              },
-              safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
-            },
-            contractNetworks: localContractNetworks,
-          };
+            owners,
+            threshold,
+            saltNonce,
+          );
           kit = await Safe.init(config);
         }
         // Step 1: txCreated
-        steps[0].status = "running";
-        onStatusUpdate?.([...steps]);
+        updateStep(steps, 0, "running", onStatusUpdate);
         let deploymentTx, kitClient, txHash;
         try {
           deploymentTx = await kit.createSafeDeploymentTransaction();
           kitClient = await kit.getSafeProvider().getExternalSigner();
-          steps[0].status = "success";
-          onStatusUpdate?.([...steps]);
+          updateStep(steps, 0, "success", onStatusUpdate);
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error
               ? e.message
               : "Failed to create deployment transaction";
-          steps[0].status = "error";
-          steps[0].error = errMsg;
           setDeployError(errMsg);
-          onStatusUpdate?.([...steps]);
-          setIsLoading(false);
+          setIsDeploying(false);
+          updateStep(steps, 0, "error", onStatusUpdate, errMsg);
           return steps;
         }
         // Step 2: txSent
-        steps[1].status = "running";
-        onStatusUpdate?.([...steps]);
+        updateStep(steps, 1, "running", onStatusUpdate);
         try {
           txHash = await kitClient!.sendTransaction({
             to: deploymentTx.to as `0x${string}`,
@@ -220,70 +198,60 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
             data: deploymentTx.data as `0x${string}`,
             chain: chain,
           });
-          steps[1].status = "success";
-          steps[1].txHash = txHash;
           setDeployTxHash(txHash);
-          onStatusUpdate?.([...steps]);
+          updateStep(steps, 1, "success", onStatusUpdate, undefined, txHash);
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error ? e.message : "Failed to send transaction";
-          steps[1].status = "error";
-          steps[1].error = errMsg;
           setDeployError(errMsg);
-          onStatusUpdate?.([...steps]);
-          setIsLoading(false);
+          setIsDeploying(false);
+          updateStep(steps, 1, "error", onStatusUpdate, errMsg);
           return steps;
         }
         // Step 3: confirmed
-        steps[2].status = "running";
-        onStatusUpdate?.([...steps]);
+        updateStep(steps, 2, "running", onStatusUpdate);
         try {
           if (txHash) {
             await waitForTransactionReceipt(kitClient!, { hash: txHash });
-            steps[2].status = "success";
-            steps[2].txHash = txHash;
             setDeployTxHash(txHash);
-            onStatusUpdate?.([...steps]);
+            updateStep(steps, 2, "success", onStatusUpdate, undefined, txHash);
           }
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error ? e.message : "Failed to confirm transaction";
-          steps[2].status = "error";
-          steps[2].error = errMsg;
           setDeployError(errMsg);
-          onStatusUpdate?.([...steps]);
-          setIsLoading(false);
+          setIsDeploying(false);
+          updateStep(steps, 2, "error", onStatusUpdate, errMsg);
           return steps;
         }
         // Step 4: deployed
-        steps[3].status = "running";
-        onStatusUpdate?.([...steps]);
+        updateStep(steps, 3, "running", onStatusUpdate);
         try {
           const safeAddress = await kit.getAddress();
           const newKit = await kit.connect({ safeAddress });
           await newKit.isSafeDeployed();
-          steps[3].status = "success";
-          steps[3].txHash = txHash;
           setDeployTxHash(txHash);
-          onStatusUpdate?.([...steps]);
+          updateStep(steps, 3, "success", onStatusUpdate, undefined, txHash);
           setProtocolKits((prev) => ({ ...prev, [chain.id]: newKit }));
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error ? e.message : "Failed to verify Safe deployment";
-          steps[3].status = "error";
-          steps[3].error = errMsg;
           setDeployError(errMsg);
-          onStatusUpdate?.([...steps]);
-          setIsLoading(false);
+          setIsDeploying(false);
+          updateStep(steps, 3, "error", onStatusUpdate, errMsg);
           return steps;
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to deploy Safe");
-        steps[0].status = "error";
-        steps[0].error =
-          e instanceof Error ? e.message : "Failed to deploy Safe";
+        updateStep(
+          steps,
+          0,
+          "error",
+          onStatusUpdate,
+          e instanceof Error ? e.message : "Failed to deploy Safe",
+        );
       } finally {
-        setIsLoading(false);
+        // Do not setIsDeploying(false) here; let the client handle closing the modal.
       }
       return steps;
     },
@@ -294,7 +262,8 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
     setProtocolKits({});
     setSafeAddress(null);
     setError(null);
-    setIsLoading(false);
+    setIsPredicting(false);
+    setIsDeploying(false);
     setDeployError(null);
     setDeployTxHash(null);
     localStorage.removeItem("safeAddress");
@@ -305,7 +274,8 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         protocolKits,
         safeAddress,
-        isLoading,
+        isPredicting,
+        isDeploying,
         error,
         predictSafeAddress,
         deploySafe,
@@ -319,6 +289,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// -- Custom Hook --
 export function useSafe() {
   const ctx = useContext(SafeContext);
   if (!ctx) throw new Error("useSafe must be used within a SafeProvider");
