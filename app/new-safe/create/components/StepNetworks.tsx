@@ -4,46 +4,48 @@ import { Chain } from "viem";
 
 interface StepNetworksProps {
   chains: readonly Chain[];
-  selectedNetworks: number[];
-  handleCheckbox: (id: number) => void;
-  handleReset: () => void;
+  selectedNetwork: number | undefined;
+  handleSelect: (id: number) => void;
   onNext: () => void;
 }
 
-export default function StepNetworks(props: StepNetworksProps) {
-  const { chains, selectedNetworks, handleCheckbox, handleReset, onNext } =
-    props;
+export default function StepNetworks({
+  chains,
+  selectedNetwork,
+  handleSelect,
+  onNext,
+}: StepNetworksProps) {
   return (
     <div className="card card-lg card-border bg-base-100 col-span-6 shadow-xl md:col-span-4">
       <div className="card-body gap-8">
-        <h2 className="card-title">Select Ethereum Networks</h2>
+        <h2 className="card-title">Select Ethereum Network</h2>
         <p className="text-base-content flex-none">
-          Choose one or more Ethereum networks for your Safe account. You can
-          reset your selection or proceed to the next step at any time.
+          Choose one Ethereum network for your Safe account. You can add more
+          networks later from the deployed Safe account.
         </p>
-        <form
-          className="flex flex-1 flex-wrap items-center gap-2"
-          onReset={handleReset}
+        <select
+          className="select select-bordered select-primary w-full max-w-xs"
+          aria-label="Select network"
+          value={selectedNetwork ?? -1}
+          disabled={!selectedNetwork}
+          onChange={(e) => handleSelect(Number(e.target.value))}
         >
-          <input className="btn btn-square btn-sm" type="reset" value="×" />
+          <option value={-1} disabled>
+            Choose network...
+          </option>
           {chains.map((net) => (
-            <input
-              key={net.id}
-              type="checkbox"
-              className="btn btn-dash btn-secondary rounded"
-              aria-label={net.name}
-              checked={selectedNetworks.includes(net.id)}
-              onChange={() => handleCheckbox(net.id)}
-            />
+            <option key={net.id} value={net.id}>
+              {net.name}
+            </option>
           ))}
-        </form>
+        </select>
         <div className="card-actions flex justify-between gap-4">
           <BtnBackHistory label="Cancel" />
           <button
             type="button"
             className="btn btn-primary rounded"
             onClick={onNext}
-            disabled={selectedNetworks.length === 0}
+            disabled={selectedNetwork === null}
           >
             Next
           </button>

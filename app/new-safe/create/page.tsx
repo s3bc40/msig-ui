@@ -2,7 +2,7 @@
 
 import BtnBack from "@/app/components/BtnBackHistory";
 import { useState, useEffect, useRef } from "react";
-import { useAccount, useChains } from "wagmi";
+import { useAccount, useChains, useClient } from "wagmi";
 import { type Chain } from "viem";
 import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
@@ -11,13 +11,11 @@ import { useSafe, SafeDeployStep } from "@/app/provider/SafeProvider";
 const steps = ["Networks", "Signers & Threshold", "Validate"];
 
 function SafeDetails({
-  chains,
-  selected,
+  selectedNetwork,
   signers,
   threshold,
 }: {
-  chains: readonly Chain[];
-  selected: number[];
+  selectedNetwork: Chain | undefined;
   signers: string[];
   threshold: number;
 }) {
@@ -26,19 +24,17 @@ function SafeDetails({
       <div>
         <p className="mb-1 text-lg font-semibold">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
-          {selected.length === 0 ? (
+          {!selectedNetwork ? (
             <span className="badge badge-outline text-base-content">
               None selected
             </span>
           ) : (
-            selected.map((id) => {
-              const net = chains.find((n) => n.id === id);
-              return (
-                <span key={id} className="badge badge-secondary badge-outline">
-                  {net?.name || id}
-                </span>
-              );
-            })
+            <span
+              key={selectedNetwork.id}
+              className="badge badge-secondary badge-outline"
+            >
+              {selectedNetwork.name}
+            </span>
           )}
         </div>
       </div>
@@ -79,9 +75,16 @@ function SafeDetails({
 
 export default function CreateSafePage() {
   const chains = useChains();
-  const { address: signer } = useAccount();
+  const client = useClient();
+  const { address: signer, isConnected } = useAccount();
 
-  const { isLoading, error, predictSafeAddress, deploySafe } = useSafe();
+  const {
+    isLoading,
+    predictSafeAddress,
+    deploySafe,
+    deployError,
+    deployTxHash,
+  } = useSafe();
 
   // Error separation
   const [predictError, setPredictError] = useState<string | null>(null);
@@ -90,14 +93,18 @@ export default function CreateSafePage() {
   const [currentStep, setCurrentStep] = useState(0);
 
   // Network selection state
-  const [selectedNetworks, setSelectedNetworks] = useState<number[]>([]);
-  function handleCheckbox(id: number) {
-    setSelectedNetworks((prev) =>
-      prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id],
-    );
-  }
-  function handleReset() {
-    setSelectedNetworks([]);
+  const [selectedNetwork, setSelectedNetwork] = useState<Chain>();
+  useEffect(() => {
+    if (client?.chain) {
+      setSelectedNetwork(client.chain);
+    }
+  }, [client?.chain]);
+
+  function handleSelect(id: number) {
+    const chain = chains.find((c) => c.id === id);
+    if (chain) {
+      setSelectedNetwork(chain);
+    }
   }
 
   // Owners state with auto-fill of connected wallet
@@ -140,12 +147,12 @@ export default function CreateSafePage() {
 
   // Ref to cache last-used params and address
   const lastPredictionRef = useRef<{
-    networks: number[];
+    network: Chain;
     signers: string[];
     threshold: number;
     address: `0x${string}` | null;
   }>({
-    networks: [],
+    network: {} as Chain,
     signers: [],
     threshold: 1,
     address: null,
@@ -156,9 +163,8 @@ export default function CreateSafePage() {
     <StepNetworks
       key="networks"
       chains={chains}
-      selectedNetworks={selectedNetworks}
-      handleCheckbox={handleCheckbox}
-      handleReset={handleReset}
+      selectedNetwork={isConnected ? selectedNetwork?.id : undefined}
+      handleSelect={handleSelect}
       onNext={() => setCurrentStep(1)}
     />,
     <StepSigners
@@ -177,17 +183,14 @@ export default function CreateSafePage() {
 
   // Modal state for deployment progress
   // DaisyUI modal uses dialog element, so we don't need showModal state
-  const [deployStatus, setDeployStatus] = useState<
-    Record<number, SafeDeployStep>
-  >({});
+  const [deployStatus, setDeployStatus] = useState<SafeDeployStep[]>([]);
   const [deploying, setDeploying] = useState(false);
-  const [deployError, setDeployError] = useState<string | null>(null);
 
   // Predict Safe address when entering validation step
   useEffect(() => {
     if (
       currentStep === 2 &&
-      selectedNetworks.length > 0 &&
+      selectedNetwork &&
       signers.filter(Boolean).length > 0 &&
       threshold > 0
     ) {
@@ -197,8 +200,7 @@ export default function CreateSafePage() {
       );
       // Compare current params to lastPredictionRef
       const paramsChanged =
-        lastPredictionRef.current.networks.join(",") !==
-          selectedNetworks.join(",") ||
+        lastPredictionRef.current.network !== selectedNetwork ||
         lastPredictionRef.current.signers.join(",") !== signers.join(",") ||
         lastPredictionRef.current.threshold !== threshold;
       if (paramsChanged) {
@@ -207,16 +209,14 @@ export default function CreateSafePage() {
         const fetchPredictedAddress = async () => {
           try {
             const predictedAddress = await predictSafeAddress(
-              selectedNetworks
-                .map((id) => chains.find((c) => c.id === id)!)
-                .filter(Boolean),
+              selectedNetwork,
               validSigners,
               threshold,
               saltNonce,
             );
             setSafePredictedAddress(predictedAddress);
             lastPredictionRef.current = {
-              networks: [...selectedNetworks],
+              network: selectedNetwork,
               signers: [...signers],
               threshold,
               address: predictedAddress,
@@ -235,7 +235,7 @@ export default function CreateSafePage() {
     }
   }, [
     currentStep,
-    selectedNetworks,
+    selectedNetwork,
     signers,
     threshold,
     chains,
@@ -254,29 +254,22 @@ export default function CreateSafePage() {
       modal.showModal();
     }
     setDeploying(true);
-    setDeployStatus({});
-    setDeployError(null);
     try {
       // Only pass valid addresses to SDK
       const validSigners = signers.filter((s): s is `0x${string}` =>
         /^0x[a-fA-F0-9]{40}$/.test(s),
       );
-      const status: Record<number, SafeDeployStep> = {};
-      const txs = await deploySafe(
-        selectedNetworks
-          .map((id) => chains.find((c) => c.id === id)!)
-          .filter(Boolean),
+      await deploySafe(
+        selectedNetwork!,
         validSigners,
         threshold,
         saltNonce,
-        (chainId, step) => {
-          status[chainId] = step;
-          setDeployStatus((prev) => ({ ...prev, [chainId]: step }));
+        (stepsArr) => {
+          setDeployStatus(stepsArr);
         },
       );
-      setDeployStatus(txs);
     } catch (e) {
-      setDeployError(e instanceof Error ? e.message : "Deployment failed");
+      console.error("Deployment error:", e);
     } finally {
       setDeploying(false);
     }
@@ -314,8 +307,7 @@ export default function CreateSafePage() {
                 Review & Validate Safe Account
               </h2>
               <SafeDetails
-                chains={chains}
-                selected={selectedNetworks}
+                selectedNetwork={selectedNetwork!}
                 signers={signers}
                 threshold={threshold}
               />
@@ -368,81 +360,71 @@ export default function CreateSafePage() {
             id="safe_deploy_modal"
             className="modal modal-bottom sm:modal-middle"
           >
-            <div className="modal-box">
+            <div className="modal-box !max-w-3xl">
               <h3 className="mb-4 text-lg font-bold">
                 Safe Deployment Progress
               </h3>
-              <ul className="mb-4">
-                {selectedNetworks.map((id) => {
-                  const net = chains.find((c) => c.id === id);
-                  const step = deployStatus[id];
-                  // DaisyUI stepper stages
-                  const stages = [
-                    { label: "Pending", key: "pending" },
-                    { label: "Tx Sent", key: "txSent" },
-                    { label: "Confirmed", key: "confirmed" },
-                    { label: "Deployed", key: "deployed" },
-                  ];
-                  // Find current step index
-                  const currentIdx = step
-                    ? stages.findIndex((s) => s.key === step.status)
-                    : -1;
-                  return (
-                    <li key={id} className="mb-6">
-                      <span className="font-semibold">{net?.name || id}:</span>
-                      <ul className="steps steps-vertical mt-2 w-full">
-                        {stages.map((stage, idx) => (
-                          <li
-                            key={stage.key}
-                            className={
-                              "step text-xs" +
-                              (currentIdx > idx
-                                ? " step-success"
-                                : currentIdx === idx
-                                  ? step?.status === "error"
-                                    ? " step-error"
-                                    : " step-primary"
-                                  : "")
-                            }
-                          >
-                            {stage.label}
-                            {/* Show spinner for current step if pending/txSent */}
-                            {currentIdx === idx &&
-                              (step?.status === "pending" ||
-                                step?.status === "txSent") && (
-                                <span className="loading loading-spinner loading-xs ml-2" />
-                              )}
-                            {/* Show txHash for txSent/confirmed/deployed */}
-                            {step?.txHash && idx >= 1 && currentIdx >= idx && (
-                              <span className="badge badge-info badge-outline badge-xs ml-2">
-                                Tx: {step.txHash}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                        {/* Error step */}
-                        {step?.status === "error" && (
-                          <li className="alert alert-error text-xs">
-                            Error
-                            {step.error && <span>{step.error}</span>}
-                          </li>
-                        )}
-                        {/* Not started */}
-                        {!step && <li className="step text-xs">Not started</li>}
+              <div className="mb-4">
+                {(() => {
+                  const stepsArr = deployStatus;
+                  const stepLabels = {
+                    txCreated: "Tx Created",
+                    txSent: "Tx Sent",
+                    confirmed: "Confirmed",
+                    deployed: "Deployed",
+                  };
+                  console.log("StepsArr:", stepsArr);
+                  return stepsArr && stepsArr.length > 0 ? (
+                    <>
+                      <ul className="steps w-full">
+                        {stepsArr.map((step) => {
+                          let stepClass = "step ";
+                          if (step.status === "running")
+                            stepClass += "step-primary";
+                          else if (step.status === "success")
+                            stepClass += "step-success";
+                          else if (step.status === "error")
+                            stepClass += "step-error";
+                          return (
+                            <li key={step.step} className={stepClass}>
+                              {stepLabels[step.step]}
+                            </li>
+                          );
+                        })}
                       </ul>
-                    </li>
-                  );
-                })}
-              </ul>
-              {deployError && (
-                <div className="alert alert-error mb-2">{deployError}</div>
-              )}
-              <div className="modal-action">
-                <form method="dialog">
-                  <button className="btn" disabled={deploying}>
-                    Close
-                  </button>
-                </form>
+                      {/* Display txHash below the stepper if available */}
+                      {deployTxHash && (
+                        <div className="mt-4">
+                          <span className="font-semibold">
+                            Transaction Hash:
+                          </span>
+                          {selectedNetwork &&
+                          selectedNetwork.blockExplorers?.default?.url ? (
+                            <a
+                              href={`${selectedNetwork.blockExplorers.default.url}/tx/${deployTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="link link-primary ml-2 font-mono text-xs break-all"
+                            >
+                              {deployTxHash}
+                            </a>
+                          ) : (
+                            <span className="ml-2 font-mono text-xs break-all">
+                              {deployTxHash}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {deployError && (
+                        <div className="alert alert-error mt-4 w-full max-w-full overflow-x-auto break-words">
+                          <pre className="text-xs whitespace-pre-wrap">
+                            {deployError}
+                          </pre>
+                        </div>
+                      )}
+                    </>
+                  ) : null;
+                })()}
               </div>
             </div>
             <form method="dialog" className="modal-backdrop">
@@ -458,8 +440,7 @@ export default function CreateSafePage() {
             <div className="card-body">
               <h2 className="card-title">Safe Account Preview</h2>
               <SafeDetails
-                chains={chains}
-                selected={selectedNetworks}
+                selectedNetwork={isConnected ? selectedNetwork : undefined}
                 signers={signers}
                 threshold={threshold}
               />

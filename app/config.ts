@@ -11,7 +11,7 @@ export const config = getDefaultConfig({
   chains: [mainnet, sepolia, anvil],
   transports: {
     [mainnet.id]: http(),
-    [sepolia.id]: http(),
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!),
     [anvil.id]: http(),
   },
   ssr: true,
