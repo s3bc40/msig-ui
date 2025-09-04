@@ -14,7 +14,7 @@ export default function SafeDetails({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="mb-1 text-lg font-semibold">Selected Networks:</p>
+        <p className="mb-2 text-lg font-medium">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
           {!selectedNetwork ? (
             <span className="badge badge-outline text-base-content">
@@ -32,7 +32,7 @@ export default function SafeDetails({
       </div>
       <div className="divider my-0" />
       <div>
-        <p className="mb-1 text-lg font-semibold">Signers:</p>
+        <p className="mb-2 text-lg font-medium">Signers:</p>
         {signers.length === 0 || signers.every((s) => !s) ? (
           <div className="badge badge-outline">No signers added</div>
         ) : (
@@ -53,7 +53,7 @@ export default function SafeDetails({
       </div>
       <div className="divider my-0" />
       <div>
-        <p className="mb-1 text-lg font-semibold">Threshold:</p>
+        <p className="mb-2 text-lg font-medium">Threshold:</p>
         <div className="flex flex-wrap items-center gap-2 p-2">
           <span className="badge badge-success text-base font-bold">
             {threshold} / {signers.length}

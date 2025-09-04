@@ -23,6 +23,7 @@ export default function CreateSafeClient() {
   const {
     isPredicting,
     isDeploying,
+    setIsDeploying,
     predictSafeAddress,
     deploySafe,
     deployError,
@@ -202,22 +203,24 @@ export default function CreateSafeClient() {
 
   function handleCloseModal() {
     setModalOpen(false);
+    setIsDeploying(false);
+    setDeployStatus([]);
     // Optionally reset deployStatus, redirect, or reset form here
   }
 
   return (
-    <div className="flex w-full flex-col gap-12 p-10">
-      <div className="grid w-full grid-cols-6 items-center">
-        <div className="self-start">
-          <BtnBack />
+    <>
+      <div className="container mx-auto flex flex-col justify-start gap-2 p-10">
+        <div className="grid w-full grid-cols-6 items-center">
+          <div className="self-start">
+            <BtnBack />
+          </div>
+          <Stepper steps={CREATE_STEPS} currentStep={currentStep} />
         </div>
-        <Stepper steps={CREATE_STEPS} currentStep={currentStep} />
-      </div>
-      {currentStep === 2 ? (
-        <>
-          <div className="card card-border bg-base-100 card-xl w-full shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title mb-6">
+        <div className="flex flex-1 flex-col items-center justify-center">
+          {currentStep === 2 ? (
+            <div className="bg-base-100 container flex flex-col rounded p-8 shadow-xl">
+              <h2 className="mb-6 text-xl font-bold">
                 Review & Validate Safe Account
               </h2>
               <SafeDetails
@@ -270,32 +273,31 @@ export default function CreateSafeClient() {
                 </div>
               </div>
             </div>
-          </div>
-          <DeploymentModal
-            open={modalOpen}
-            steps={deployStatus}
-            deployTxHash={deployTxHash}
-            deployError={deployError}
-            selectedNetwork={selectedNetwork}
-            onClose={handleCloseModal}
-          />
-        </>
-      ) : (
-        <div className="grid w-full grid-cols-6 gap-8">
-          {stepContent[currentStep]}
-          {/* Safe Info Card: Display Selected Networks */}
-          <div className="card card-border bg-base-100 card-xl col-span-4 col-start-2 shadow-xl md:col-span-2 md:col-start-auto">
-            <div className="card-body">
-              <h2 className="card-title">Safe Account Preview</h2>
-              <SafeDetails
-                selectedNetwork={isConnected ? selectedNetwork : undefined}
-                signers={signers}
-                threshold={threshold}
-              />
+          ) : (
+            <div className="grid w-full grid-cols-12 gap-8">
+              {stepContent[currentStep]}
+              {/* Safe Info Card: Display Selected Networks */}
+              <div className="bg-base-100 col-span-10 col-start-2 container max-h-fit rounded p-8 shadow-xl md:col-span-5 md:col-start-auto">
+                <h2 className="mb-6 text-xl font-bold">Safe Account Preview</h2>
+                <SafeDetails
+                  selectedNetwork={isConnected ? selectedNetwork : undefined}
+                  signers={signers}
+                  threshold={threshold}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+      {/* Modal outside of contaienr flex */}
+      <DeploymentModal
+        open={modalOpen}
+        steps={deployStatus}
+        deployTxHash={deployTxHash}
+        deployError={deployError}
+        selectedNetwork={selectedNetwork}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 }

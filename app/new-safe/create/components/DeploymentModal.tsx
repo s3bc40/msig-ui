@@ -1,12 +1,6 @@
 import React from "react";
 import { DeploymentModalProps } from "../../types";
-
-const stepLabels = {
-  txCreated: "Tx Created",
-  txSent: "Tx Sent",
-  confirmed: "Confirmed",
-  deployed: "Deployed",
-};
+import { STEPS_DEPLOY_LABEL } from "../../constants";
 
 const DeploymentModal: React.FC<DeploymentModalProps> = ({
   open,
@@ -14,6 +8,7 @@ const DeploymentModal: React.FC<DeploymentModalProps> = ({
   deployTxHash,
   deployError,
   selectedNetwork,
+  onClose,
 }) => {
   if (!open) return null;
   return (
@@ -22,7 +17,7 @@ const DeploymentModal: React.FC<DeploymentModalProps> = ({
       className="modal modal-bottom sm:modal-middle"
       open
     >
-      <div className="modal-box !max-w-3xl">
+      <div className="modal-box flex !max-w-3xl flex-col gap-6 p-8">
         <h3 className="mb-4 text-lg font-bold">Safe Deployment Progress</h3>
         <div className="mb-4">
           <ul className="steps w-full">
@@ -33,7 +28,7 @@ const DeploymentModal: React.FC<DeploymentModalProps> = ({
               else if (step.status === "error") stepClass += "step-error";
               return (
                 <li key={step.step} className={stepClass}>
-                  {stepLabels[step.step]}
+                  {STEPS_DEPLOY_LABEL[step.step]}
                 </li>
               );
             })}
@@ -65,7 +60,7 @@ const DeploymentModal: React.FC<DeploymentModalProps> = ({
           )}
         </div>
       </div>
-      <form method="dialog" className="modal-backdrop">
+      <form method="dialog" className="modal-backdrop" onClick={onClose}>
         <button>close</button>
       </form>
     </dialog>

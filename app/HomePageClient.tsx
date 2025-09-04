@@ -9,7 +9,7 @@ export default function HomePageClient() {
 
   return (
     <div className="container mx-auto max-w-2xl self-center shadow-2xl">
-      <div className="bg-base-100 flex flex-col items-center justify-center gap-6 p-10">
+      <div className="bg-base-100 flex flex-col items-center justify-center gap-6 rounded p-10">
         <h2 className="text-4xl font-bold">MSIG UI</h2>
         <p className="text-xl">
           Your local safe wallet app to manage safe accounts.

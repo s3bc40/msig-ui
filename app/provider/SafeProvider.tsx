@@ -34,6 +34,7 @@ export interface SafeContextType {
   safeAddress: string | null;
   isPredicting: boolean;
   isDeploying: boolean;
+  setIsDeploying: React.Dispatch<React.SetStateAction<boolean>>;
   error: string | null;
   predictSafeAddress: (
     chain: Chain,
@@ -276,6 +277,7 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
         safeAddress,
         isPredicting,
         isDeploying,
+        setIsDeploying,
         error,
         predictSafeAddress,
         deploySafe,

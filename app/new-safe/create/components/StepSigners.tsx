@@ -1,4 +1,5 @@
 import React from "react";
+import StepLayout from "./StepLayout";
 
 interface StepSignersProps {
   signers: string[];
@@ -23,17 +24,14 @@ export default function StepSigners({
 }: StepSignersProps) {
   // Validation logic
   const addressPattern = /^0x[a-fA-F0-9]{40}$/;
-  // Check for valid addresses
   const allSignersValid =
     signers.length > 0 && signers.every((addr) => addressPattern.test(addr));
-  // Check for duplicates
   const lowerSigners = signers.map((addr) => addr.toLowerCase());
   const duplicateIndexes = lowerSigners
     .map((addr, idx, arr) => (arr.indexOf(addr) !== idx ? idx : -1))
     .filter((idx) => idx !== -1);
   const hasDuplicates = duplicateIndexes.length > 0;
 
-  // Helper to determine if input-error should be triggered
   const getInputErrorClass = (value: string, idx: number) => {
     if (!value) return "";
     const isInvalid = !addressPattern.test(value);
@@ -41,11 +39,6 @@ export default function StepSigners({
     return isInvalid || isDuplicate ? "input-error" : "";
   };
 
-  // Next button should be disabled if:
-  // - no signers
-  // - at least one signer is not a valid address
-  // - threshold <= 0
-  // - threshold > signers.length
   const isNextDisabled =
     signers.length === 0 ||
     !allSignersValid ||
@@ -53,20 +46,36 @@ export default function StepSigners({
     threshold <= 0 ||
     threshold > signers.length;
 
-  // Remove leading zeros from threshold input
   const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/^0+/, "");
     setThreshold(Number(val));
   };
 
   return (
-    <div className="card card-lg card-border bg-base-100 col-span-6 shadow-xl md:col-span-4">
-      <div className="card-body gap-8">
-        <h2 className="card-title">Signers and Threshold</h2>
-        <p className="text-base-content mb-2">
-          Here you will select the signers and set the threshold for your Safe
-          account. (UI to be implemented)
-        </p>
+    <StepLayout
+      title="Signers and Threshold"
+      description="Here you will select the signers and set the threshold for your Safe account."
+      actions={
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost btn-secondary rounded"
+            onClick={onBack}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary rounded"
+            onClick={onNext}
+            disabled={isNextDisabled}
+          >
+            Next
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-2">
         {/* Owner input fields */}
         {signers.map((owner, idx) => (
           <fieldset key={idx} className="fieldset col-span-2">
@@ -102,47 +111,29 @@ export default function StepSigners({
         >
           + Add Owner
         </button>
-        {/* Threshold */}
-        <fieldset className="fieldset w-full">
-          <legend className="fieldset-legend">Threshold</legend>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={1}
-              max={signers.length}
-              step={1}
-              value={threshold}
-              onChange={handleThresholdChange}
-              className="input validator w-fit"
-              required
-            />
-            <p className="text-sm">
-              out of {signers.length} signers required to confirm a transaction
-            </p>
-          </div>
-          <p className="validator-hint">
-            Threshold must be between 1 and {signers.length}
-          </p>
-        </fieldset>
-
-        <div className="card-actions mt-6 flex justify-between gap-4">
-          <button
-            type="button"
-            className="btn btn-ghost btn-secondary rounded"
-            onClick={onBack}
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary rounded"
-            onClick={onNext}
-            disabled={isNextDisabled}
-          >
-            Next
-          </button>
-        </div>
       </div>
-    </div>
+      {/* Threshold */}
+      <fieldset className="fieldset w-full">
+        <legend className="fieldset-legend">Threshold</legend>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            max={signers.length}
+            step={1}
+            value={threshold}
+            onChange={handleThresholdChange}
+            className="input validator w-fit"
+            required
+          />
+          <p className="text-sm">
+            out of {signers.length} signers required to confirm a transaction
+          </p>
+        </div>
+        <p className="validator-hint">
+          Threshold must be between 1 and {signers.length}
+        </p>
+      </fieldset>
+    </StepLayout>
   );
 }
