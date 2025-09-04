@@ -2,8 +2,8 @@
 
 import "@rainbow-me/rainbowkit/styles.css";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { Config, http } from "wagmi";
-import { mainnet, anvil, sepolia } from "wagmi/chains";
+import { http, cookieStorage, createStorage } from "wagmi";
+import { mainnet, sepolia, anvil } from "wagmi/chains";
 
 export const config = getDefaultConfig({
   appName: "My RainbowKit App",
@@ -15,4 +15,7 @@ export const config = getDefaultConfig({
     [anvil.id]: http(),
   },
   ssr: true,
-}) as Config;
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+});

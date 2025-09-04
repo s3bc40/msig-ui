@@ -1,5 +1,5 @@
 import React from "react";
-import { DeploymentModalProps } from "../types";
+import { DeploymentModalProps } from "../../types";
 
 const stepLabels = {
   txCreated: "Tx Created",

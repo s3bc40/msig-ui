@@ -10,15 +10,14 @@ import SafeDetails from "../components/SafeDetails";
 import Stepper from "./components/Stepper";
 import DeploymentModal from "./components/DeploymentModal";
 import { useSafe } from "@/app/provider/SafeProvider";
-import { isValidAddress, havePredictionParamsChanged } from "./helpers";
-import { LastPredictionRef } from "./types";
+import { isValidAddress, havePredictionParamsChanged } from "../helpers";
+import { LastPredictionRef } from "../types";
 import { SafeDeployStep } from "@/app/provider/types";
-
-const steps = ["Networks", "Signers & Threshold", "Validate"];
+import { CREATE_STEPS } from "../constants";
 
 export default function CreateSafeClient() {
-  const chains = useChains();
   const client = useClient();
+  const chains = useChains();
   const { address: signer, isConnected } = useAccount();
 
   const {
@@ -212,7 +211,7 @@ export default function CreateSafeClient() {
         <div className="self-start">
           <BtnBack />
         </div>
-        <Stepper steps={steps} currentStep={currentStep} />
+        <Stepper steps={CREATE_STEPS} currentStep={currentStep} />
       </div>
       {currentStep === 2 ? (
         <>

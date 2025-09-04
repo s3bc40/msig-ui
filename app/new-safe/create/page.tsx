@@ -1,7 +1,6 @@
 import CreateSafeClient from "./CreateSafeClient";
 
 export default function CreateSafePage() {
-  // In the future, fetch static chain data here and pass as props
-  // const staticChains = ...
+  // Add more static data fetching here if needed
   return <CreateSafeClient />;
 }
