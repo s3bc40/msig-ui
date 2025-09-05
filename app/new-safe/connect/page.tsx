@@ -1,30 +1,78 @@
-import BtnBack from "@/app/components/BtnBackHistory";
+"use client";
 
-export default function ConnectSafePage() {
+import { useState } from "react";
+import AppSection from "@/app/components/AppSection";
+import AppCard from "@/app/components/AppCard";
+import AppAddress from "@/app/components/AppAddress";
+import BtnBackHistory from "@/app/components/BtnBackHistory";
+import { useSafe } from "@/app/provider/SafeProvider";
+import { useAccount } from "wagmi";
+
+export default function ConnectSafeClient() {
+  const { chain } = useAccount();
+  const [safeAddress, setSafeAddress] = useState("");
+
+  const { connectSafe, isConnecting, connectError, isDeployed } = useSafe();
+
+  async function handleConnect() {
+    if (!chain) {
+      alert("Please connect your wallet to a network first.");
+      return;
+    }
+    await connectSafe(chain, safeAddress as `0x${string}`);
+  }
+
+  function isValidSafeAddress() {
+    return /^0x[a-fA-F0-9]{40}$/.test(safeAddress);
+  }
+
   return (
-    <div className="mx-auto flex min-h-full w-full flex-col items-center gap-6 p-10">
-      <div className="self-start">
-        <BtnBack />
+    <AppSection>
+      <div>
+        <BtnBackHistory />
       </div>
-      <div role="alert" className="alert alert-info">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          className="h-6 w-6 shrink-0 stroke-current"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          ></path>
-        </svg>
-        <p>
-          This feature is under development. Please use the Create Safe option
-          for now.
-        </p>
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <AppCard title="Connect to Safe">
+          <p className="text-base-content mb-4">
+            Enter your Safe address to connect and manage your multi-signature
+            wallet.
+          </p>
+          <div className="flex flex-col gap-4">
+            <input
+              type="text"
+              className="input input-bordered validator font-mono"
+              placeholder="0x..."
+              value={safeAddress}
+              pattern="^0x[a-fA-F0-9]{40}$"
+              onChange={(e) => setSafeAddress(e.target.value)}
+              disabled={isConnecting}
+              required
+            />
+            <div className="validator-hint">Invalid address format</div>
+            <button
+              type="button"
+              className="btn btn-primary w-full"
+              onClick={handleConnect}
+              disabled={isConnecting || !isValidSafeAddress()}
+            >
+              {isConnecting ? "Connecting..." : "Connect Safe"}
+            </button>
+            {isDeployed === true && (
+              <div className="alert alert-success mt-2">
+                Safe is deployed and ready!
+              </div>
+            )}
+            {isDeployed === false && (
+              <div className="alert alert-error mt-2">
+                This address is not a deployed Safe.
+              </div>
+            )}
+            {connectError && (
+              <div className="alert alert-error mt-2">{connectError}</div>
+            )}
+          </div>
+        </AppCard>
       </div>
-    </div>
+    </AppSection>
   );
 }

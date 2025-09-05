@@ -1,9 +1,11 @@
 import Link from "next/link";
+import AppSection from "@/app/components/AppSection";
+import AppCard from "@/app/components/AppCard";
 
-export default function AccountsPage() {
+export default function NewSafePage() {
   return (
-    <div className="container mx-auto max-w-2xl self-center shadow-2xl">
-      <div className="bg-base-100 flex flex-col items-center justify-center gap-8 rounded p-10">
+    <AppSection className="max-w-2xl self-center">
+      <AppCard>
         <h2 className="mb-4 text-4xl font-bold">Choose an Action</h2>
         <p className="mb-8 text-center text-xl">
           Create a new Safe account or connect to an existing one to manage your
@@ -23,7 +25,7 @@ export default function AccountsPage() {
             Connect to Safe Account
           </Link>
         </div>
-      </div>
-    </div>
+      </AppCard>
+    </AppSection>
   );
 }

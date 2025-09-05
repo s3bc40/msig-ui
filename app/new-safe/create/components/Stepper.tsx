@@ -16,7 +16,7 @@ const Stepper: React.FC<StepperProps> = ({ steps, currentStep }) => (
             ? " step-primary"
             : idx === currentStep
               ? " step-primary"
-              : "")
+              : " after:!bg-base-100 before:!bg-base-100")
         }
       >
         {label}

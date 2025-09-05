@@ -1,4 +1,5 @@
 import { type Chain } from "viem";
+import AppAddress from "@/app/components/AppAddress";
 
 interface SafeDetailsProps {
   selectedNetwork: Chain | undefined;
@@ -12,7 +13,7 @@ export default function SafeDetails({
   threshold,
 }: SafeDetailsProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <div>
         <p className="mb-2 text-lg font-medium">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
@@ -39,12 +40,11 @@ export default function SafeDetails({
           <div className="flex flex-col gap-2">
             {signers.map((address, idx) =>
               address ? (
-                <div
-                  key={idx}
-                  className="bg-base-200 w-full rounded px-2 py-1 font-mono text-sm break-all"
-                >
-                  <span className="mr-2 font-bold">{idx + 1}.</span>
-                  {address}
+                <div key={idx} className="flex flex-wrap rounded">
+                  <AppAddress
+                    address={`${idx + 1}. ${address}`}
+                    className="text-sm"
+                  />
                 </div>
               ) : null,
             )}

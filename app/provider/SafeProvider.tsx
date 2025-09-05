@@ -29,7 +29,7 @@ import { useAccount } from "wagmi";
 import { Chain } from "viem";
 
 // -- Interfaces and Context --
-export interface SafeContextType {
+interface SafeContextType {
   protocolKits: Record<number, Safe | null>; // chainId -> ProtocolKit
   safeAddress: string | null;
   isPredicting: boolean;
@@ -52,6 +52,11 @@ export interface SafeContextType {
   deployError: string | null;
   deployTxHash: string | null;
   resetSafe: () => void;
+  // Connection flow
+  connectSafe: (chain: Chain, address: `0x${string}`) => Promise<void>;
+  isConnecting: boolean;
+  connectError: string | null;
+  isDeployed: boolean | null;
 }
 
 const SafeContext = createContext<SafeContextType | undefined>(undefined);
@@ -72,6 +77,63 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
+  // Connection flow state
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [isDeployed, setIsDeployed] = useState<boolean | null>(null);
+
+  /**
+   * Connect to an existing Safe by address and chain, check if deployed, and update state
+   */
+  const connectSafe = useCallback(
+    async (chain: Chain, address: string) => {
+      setIsConnecting(true);
+      setConnectError(null);
+      setIsDeployed(null);
+      try {
+        if (!connector || !signer) {
+          setConnectError("Wallet not connected");
+          setIsConnecting(false);
+          return;
+        }
+        const provider = await getMinimalEIP1193Provider(connector);
+        if (!provider) {
+          setConnectError("Provider not available");
+          setIsConnecting(false);
+          return;
+        }
+        let kit = protocolKits[chain.id];
+        let connectedKit;
+        if (kit) {
+          connectedKit = await kit.connect({ safeAddress: address });
+        } else {
+          const config: SafeConfig = {
+            provider,
+            signer,
+            safeAddress: address,
+          };
+          kit = await Safe.init(config);
+          connectedKit = await kit.connect({ safeAddress: address });
+        }
+        setProtocolKits((prev) => ({ ...prev, [chain.id]: connectedKit }));
+        setSafeAddress(address);
+        const deployed = await connectedKit.isSafeDeployed();
+        setIsDeployed(deployed);
+        if (!deployed) {
+          setConnectError(
+            "This address is not a deployed Safe. Please check or create a new Safe.",
+          );
+        }
+      } catch (e: unknown) {
+        setConnectError(
+          e instanceof Error ? e.message : "Failed to connect to Safe",
+        );
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [protocolKits, connector, signer],
+  );
 
   // Persist safeAddress in localStorage
   useEffect(() => {
@@ -284,6 +346,11 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
         deployError,
         deployTxHash,
         resetSafe,
+        // Connection flow
+        connectSafe,
+        isConnecting,
+        connectError,
+        isDeployed,
       }}
     >
       {children}

@@ -36,7 +36,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="min-h-screen">
       <body
-        className={`min-h-screen ${roboto.variable} ${robotoMono.variable} bg-base-200 antialiased`}
+        className={`min-h-screen ${roboto.variable} ${robotoMono.variable} bg-base-300 antialiased`}
       >
         <Providers initialState={initialState}>
           <NavBar />

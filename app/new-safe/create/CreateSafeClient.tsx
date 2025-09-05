@@ -1,8 +1,11 @@
 "use client";
 
 import BtnBack from "@/app/components/BtnBackHistory";
+import AppCard from "@/app/components/AppCard";
+import AppSection from "@/app/components/AppSection";
+import AppAddress from "@/app/components/AppAddress";
 import { useState, useEffect, useRef } from "react";
-import { useAccount, useChains, useClient } from "wagmi";
+import { useAccount, useChains } from "wagmi";
 import { type Chain } from "viem";
 import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
@@ -16,9 +19,8 @@ import { SafeDeployStep } from "@/app/provider/types";
 import { CREATE_STEPS } from "../constants";
 
 export default function CreateSafeClient() {
-  const client = useClient();
   const chains = useChains();
-  const { address: signer, isConnected } = useAccount();
+  const { address: signer, chain, isConnected } = useAccount();
 
   const {
     isPredicting,
@@ -39,10 +41,10 @@ export default function CreateSafeClient() {
   // Network selection state
   const [selectedNetwork, setSelectedNetwork] = useState<Chain>();
   useEffect(() => {
-    if (client?.chain) {
-      setSelectedNetwork(client.chain);
+    if (chain) {
+      setSelectedNetwork(chain);
     }
-  }, [client?.chain]);
+  }, [chain]);
 
   function handleSelect(id: number) {
     const chain = chains.find((c) => c.id === id);
@@ -210,7 +212,7 @@ export default function CreateSafeClient() {
 
   return (
     <>
-      <div className="container mx-auto flex flex-col justify-start gap-2 p-10">
+      <AppSection>
         <div className="grid w-full grid-cols-6 items-center">
           <div className="self-start">
             <BtnBack />
@@ -219,10 +221,7 @@ export default function CreateSafeClient() {
         </div>
         <div className="flex flex-1 flex-col items-center justify-center">
           {currentStep === 2 ? (
-            <div className="bg-base-100 container flex flex-col rounded p-8 shadow-xl">
-              <h2 className="mb-6 text-xl font-bold">
-                Review & Validate Safe Account
-              </h2>
+            <AppCard title="Review & Validate Safe Account" className="w-full">
               <SafeDetails
                 selectedNetwork={selectedNetwork!}
                 signers={signers}
@@ -241,18 +240,18 @@ export default function CreateSafeClient() {
                     <p className="mb-1 text-lg font-semibold">
                       Predicted Safe Address:
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 p-2">
-                      <span className="badge badge-success badge-outline text-base break-all">
-                        {safePredictedAddress}
-                      </span>
+                    <div className="flex flex-wrap gap-2 p-2">
+                      <AppAddress
+                        address={safePredictedAddress}
+                        className="text-sm"
+                      />
                     </div>
                   </div>
                 )}
                 {predictError && (
                   <div className="alert alert-error">{predictError}</div>
                 )}
-                <div className="mt-8" />
-                <div className="flex justify-between gap-4">
+                <div className="mt-4 flex justify-between gap-2">
                   <button
                     type="button"
                     className="btn btn-secondary"
@@ -272,23 +271,24 @@ export default function CreateSafeClient() {
                   </button>
                 </div>
               </div>
-            </div>
+            </AppCard>
           ) : (
             <div className="grid w-full grid-cols-12 gap-8">
               {stepContent[currentStep]}
               {/* Safe Info Card: Display Selected Networks */}
-              <div className="bg-base-100 col-span-10 col-start-2 container max-h-fit rounded p-8 shadow-xl md:col-span-5 md:col-start-auto">
-                <h2 className="mb-6 text-xl font-bold">Safe Account Preview</h2>
-                <SafeDetails
-                  selectedNetwork={isConnected ? selectedNetwork : undefined}
-                  signers={signers}
-                  threshold={threshold}
-                />
+              <div className="col-span-10 col-start-2 md:col-span-5 md:col-start-auto">
+                <AppCard title="Safe Account Preview">
+                  <SafeDetails
+                    selectedNetwork={isConnected ? selectedNetwork : undefined}
+                    signers={signers}
+                    threshold={threshold}
+                  />
+                </AppCard>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </AppSection>
       {/* Modal outside of contaienr flex */}
       <DeploymentModal
         open={modalOpen}

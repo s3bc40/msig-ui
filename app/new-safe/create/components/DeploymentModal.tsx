@@ -1,4 +1,5 @@
 import React from "react";
+import AppAddress from "@/app/components/AppAddress";
 import { DeploymentModalProps } from "../../types";
 import { STEPS_DEPLOY_LABEL } from "../../constants";
 
@@ -42,14 +43,12 @@ const DeploymentModal: React.FC<DeploymentModalProps> = ({
                   href={`${selectedNetwork.blockExplorers.default.url}/tx/${deployTxHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="link link-primary ml-2 font-mono text-xs break-all"
+                  className="link link-primary ml-2"
                 >
-                  {deployTxHash}
+                  <AppAddress address={deployTxHash} className="text-xs" />
                 </a>
               ) : (
-                <span className="ml-2 font-mono text-xs break-all">
-                  {deployTxHash}
-                </span>
+                <AppAddress address={deployTxHash} className="ml-2 text-xs" />
               )}
             </div>
           )}
