@@ -6,3 +6,9 @@ export const STEPS_DEPLOY_LABEL = {
   confirmed: "Confirmed",
   deployed: "Deployed",
 };
+
+export const STEPS_CONNECT_LABEL = {
+  pending: "Pending",
+  connecting: "Connecting",
+  connected: "Connected",
+};

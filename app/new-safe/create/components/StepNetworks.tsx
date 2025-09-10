@@ -1,7 +1,8 @@
-import BtnBackHistory from "@/app/components/BtnBackHistory";
+import BtnBackHistory from "@/app/components/BtnCancel";
 import React from "react";
 import { Chain } from "viem";
 import StepLayout from "./StepLayout";
+import BtnCancel from "@/app/components/BtnCancel";
 
 interface StepNetworksProps {
   chains: readonly Chain[];
@@ -22,7 +23,7 @@ export default function StepNetworks({
       description="Choose one Ethereum network for your Safe account. You can add more networks later from the deployed Safe account."
       actions={
         <>
-          <BtnBackHistory label="Cancel" />
+          <BtnCancel href="/new-safe" noArrow />
           <button
             type="button"
             className="btn btn-primary rounded"

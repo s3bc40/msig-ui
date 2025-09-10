@@ -1,5 +1,4 @@
 import React from "react";
-import AppAddress from "@/app/components/AppAddress";
 import StepLayout from "./StepLayout";
 
 interface StepSignersProps {

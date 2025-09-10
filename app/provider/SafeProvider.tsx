@@ -10,56 +10,47 @@
  * If you refactor this file, keep useCallback for context functions unless you have a specific reason to remove it.
  * For more details, see: https://react.dev/reference/react/useCallback
  */
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { createContext, useState, useCallback, useEffect } from "react";
 import Safe, { SafeConfig } from "@safe-global/protocol-kit";
-import {
-  getMinimalEIP1193Provider,
-  createSafeConfig,
-  updateStep,
-} from "./helpers";
-import { SafeDeployStep } from "./types";
+import { getMinimalEIP1193Provider, createSafeConfig } from "./helpers";
+import { SafeDeployStep, SafeConnectStep } from "./types";
 import { waitForTransactionReceipt } from "viem/actions";
 import { useAccount } from "wagmi";
-import { Chain } from "viem";
+import { Chain, zeroAddress } from "viem";
 
 // -- Interfaces and Context --
 interface SafeContextType {
-  protocolKits: Record<number, Safe | null>; // chainId -> ProtocolKit
-  safeAddress: string | null;
-  isPredicting: boolean;
-  isDeploying: boolean;
-  setIsDeploying: React.Dispatch<React.SetStateAction<boolean>>;
-  error: string | null;
+  currentProtcolKit: Safe | undefined;
+  resetSafe: () => void;
+  // Predict flow
   predictSafeAddress: (
-    chain: Chain,
     owners: `0x${string}`[],
     threshold: number,
     saltNonce?: string,
   ) => Promise<`0x${string}`>;
+  isPredicting: boolean;
+  predictError: string | null;
+  // Deploy flow
   deploySafe: (
     chain: Chain,
     owners: `0x${string}`[],
     threshold: number,
     saltNonce?: string,
-    onStatusUpdate?: (steps: SafeDeployStep[]) => void,
   ) => Promise<SafeDeployStep[]>;
+  isDeploying: boolean;
   deployError: string | null;
   deployTxHash: string | null;
-  resetSafe: () => void;
+  deploySteps: SafeDeployStep[];
   // Connection flow
-  connectSafe: (chain: Chain, address: `0x${string}`) => Promise<void>;
+  connectSafe: (address: `0x${string}`) => Promise<void>;
   isConnecting: boolean;
   connectError: string | null;
-  isDeployed: boolean | null;
+  connectSteps: SafeConnectStep[];
 }
 
-const SafeContext = createContext<SafeContextType | undefined>(undefined);
+export const SafeContext = createContext<SafeContextType | undefined>(
+  undefined,
+);
 
 // -- Provider Component --
 export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -67,108 +58,61 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { address: signer, connector } = useAccount();
 
-  // Store ProtocolKit instances per chain
-  const [protocolKits, setProtocolKits] = useState<Record<number, Safe | null>>(
-    {},
-  );
-  const [safeAddress, setSafeAddress] = useState<string | null>(null);
+  // Current connected Safe in use by the user
+  const [currentProtcolKit, setCurrentProtocolKit] = useState<Safe>();
+
+  // State for predicting Safe
   const [isPredicting, setIsPredicting] = useState(false);
+  const [predictError, setPredictError] = useState<string | null>(null);
+  // State for deploying safe
   const [isDeploying, setIsDeploying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
+  const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>([
+    { step: "txCreated", status: "idle" },
+    { step: "txSent", status: "idle" },
+    { step: "confirmed", status: "idle" },
+    { step: "deployed", status: "idle" },
+  ]);
   // Connection flow state
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [isDeployed, setIsDeployed] = useState<boolean | null>(null);
+  const [connectSteps, setConnectSteps] = useState<SafeConnectStep[]>([
+    { step: "pending", status: "idle" },
+    { step: "connecting", status: "idle" },
+    { step: "connected", status: "idle" },
+  ]);
 
-  /**
-   * Connect to an existing Safe by address and chain, check if deployed, and update state
-   */
-  const connectSafe = useCallback(
-    async (chain: Chain, address: string) => {
-      setIsConnecting(true);
-      setConnectError(null);
-      setIsDeployed(null);
-      try {
-        if (!connector || !signer) {
-          setConnectError("Wallet not connected");
-          setIsConnecting(false);
-          return;
-        }
-        const provider = await getMinimalEIP1193Provider(connector);
-        if (!provider) {
-          setConnectError("Provider not available");
-          setIsConnecting(false);
-          return;
-        }
-        let kit = protocolKits[chain.id];
-        let connectedKit;
-        if (kit) {
-          connectedKit = await kit.connect({ safeAddress: address });
-        } else {
-          const config: SafeConfig = {
-            provider,
-            signer,
-            safeAddress: address,
-          };
-          kit = await Safe.init(config);
-          connectedKit = await kit.connect({ safeAddress: address });
-        }
-        setProtocolKits((prev) => ({ ...prev, [chain.id]: connectedKit }));
-        setSafeAddress(address);
-        const deployed = await connectedKit.isSafeDeployed();
-        setIsDeployed(deployed);
-        if (!deployed) {
-          setConnectError(
-            "This address is not a deployed Safe. Please check or create a new Safe.",
-          );
-        }
-      } catch (e: unknown) {
-        setConnectError(
-          e instanceof Error ? e.message : "Failed to connect to Safe",
-        );
-      } finally {
-        setIsConnecting(false);
-      }
-    },
-    [protocolKits, connector, signer],
-  );
-
-  // Persist safeAddress in localStorage
+  // Sync currentProtcolKit address to localStorage for auto-connect
   useEffect(() => {
-    if (safeAddress) {
-      localStorage.setItem("safeAddress", safeAddress);
-    } else {
-      localStorage.removeItem("safeAddress");
+    if (currentProtcolKit) {
+      currentProtcolKit.getAddress().then((address) => {
+        localStorage.setItem("safeAddress", address);
+      });
     }
-  }, [safeAddress]);
+  }, [currentProtcolKit]);
 
-  // Restore safeAddress on load
-  useEffect(() => {
-    const stored = localStorage.getItem("safeAddress");
-    if (stored) setSafeAddress(stored);
-  }, []);
+  function resetSafe() {
+    setCurrentProtocolKit(undefined);
+    setPredictError(null);
+    setIsPredicting(false);
+    setIsDeploying(false);
+    setDeployError(null);
+    setDeployTxHash(null);
+    setIsConnecting(false);
+  }
 
   /**
    * Predict Safe address for a single chain, but keep protocolKits for future multichain support
    */
   const predictSafeAddress = useCallback(
-    async (
-      chain: Chain,
-      owners: `0x${string}`[],
-      threshold: number,
-      saltNonce?: string,
-    ) => {
-      setIsPredicting(true);
-      setError(null);
+    async (owners: `0x${string}`[], threshold: number, saltNonce?: string) => {
       let kit: Safe | null = null;
-      let addr: string = "";
       const provider = await getMinimalEIP1193Provider(connector);
       if (!provider) {
-        setError("Provider not available");
+        setPredictError("Provider not available");
         setIsPredicting(false);
-        return "" as `0x${string}`;
+        return zeroAddress;
       }
       try {
         const config: SafeConfig = createSafeConfig(
@@ -178,19 +122,15 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
           threshold,
           saltNonce,
         );
-        console.log("Predicting Safe address with config:", config);
         kit = await Safe.init(config);
-        addr = await kit.getAddress();
-        setProtocolKits((prev) => ({ ...prev, [chain.id]: kit }));
       } catch (e: unknown) {
-        setError(
+        setPredictError(
           e instanceof Error ? e.message : "Failed to predict Safe address",
         );
       } finally {
         setIsPredicting(false);
       }
-      setSafeAddress(addr);
-      return addr as `0x${string}`;
+      return kit?.getAddress() as Promise<`0x${string}`>;
     },
     [signer, connector],
   );
@@ -204,56 +144,52 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
       owners: `0x${string}`[],
       threshold: number,
       saltNonce?: string,
-      onStatusUpdate?: (steps: SafeDeployStep[]) => void,
     ) => {
-      setIsDeploying(true);
-      setError(null);
-      setDeployError(null);
-      setDeployTxHash(null);
       const steps: SafeDeployStep[] = [
         { step: "txCreated", status: "idle" },
         { step: "txSent", status: "idle" },
         { step: "confirmed", status: "idle" },
         { step: "deployed", status: "idle" },
       ];
-      const provider = await getMinimalEIP1193Provider(connector);
-      if (!provider) {
-        setError("Provider not available");
-        setIsDeploying(false);
-        updateStep(steps, 0, "error", onStatusUpdate, "Provider not available");
-        return steps;
-      }
       try {
-        let kit = protocolKits[chain.id];
-        if (!kit) {
-          const config: SafeConfig = createSafeConfig(
-            provider,
-            signer,
-            owners,
-            threshold,
-            saltNonce,
-          );
-          kit = await Safe.init(config);
-        }
         // Step 1: txCreated
-        updateStep(steps, 0, "running", onStatusUpdate);
+        steps[0].status = "running";
+        setDeploySteps([...steps]);
+        const provider = await getMinimalEIP1193Provider(connector);
+        if (!provider) {
+          setDeployError("Provider not available");
+          steps[0].status = "error";
+          setDeploySteps([...steps]);
+          setIsDeploying(false);
+          return steps;
+        }
+        const config: SafeConfig = createSafeConfig(
+          provider,
+          signer,
+          owners,
+          threshold,
+          saltNonce,
+        );
+
+        const kit = await Safe.init(config);
         let deploymentTx, kitClient, txHash;
         try {
           deploymentTx = await kit.createSafeDeploymentTransaction();
           kitClient = await kit.getSafeProvider().getExternalSigner();
-          updateStep(steps, 0, "success", onStatusUpdate);
+          steps[0].status = "success";
+          steps[1].status = "running";
+          setDeploySteps([...steps]);
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error
               ? e.message
               : "Failed to create deployment transaction";
           setDeployError(errMsg);
+          steps[0].status = "error";
+          setDeploySteps([...steps]);
           setIsDeploying(false);
-          updateStep(steps, 0, "error", onStatusUpdate, errMsg);
           return steps;
         }
-        // Step 2: txSent
-        updateStep(steps, 1, "running", onStatusUpdate);
         try {
           txHash = await kitClient!.sendTransaction({
             to: deploymentTx.to as `0x${string}`,
@@ -262,105 +198,156 @@ export const SafeProvider: React.FC<{ children: React.ReactNode }> = ({
             chain: chain,
           });
           setDeployTxHash(txHash);
-          updateStep(steps, 1, "success", onStatusUpdate, undefined, txHash);
+          steps[1].status = "success";
+          steps[2].status = "running";
+          setDeploySteps([...steps]);
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error ? e.message : "Failed to send transaction";
           setDeployError(errMsg);
+          steps[1].status = "error";
+          setDeploySteps([...steps]);
           setIsDeploying(false);
-          updateStep(steps, 1, "error", onStatusUpdate, errMsg);
           return steps;
         }
-        // Step 3: confirmed
-        updateStep(steps, 2, "running", onStatusUpdate);
         try {
           if (txHash) {
             await waitForTransactionReceipt(kitClient!, { hash: txHash });
             setDeployTxHash(txHash);
-            updateStep(steps, 2, "success", onStatusUpdate, undefined, txHash);
+            steps[2].status = "success";
+            steps[3].status = "running";
+            setDeploySteps([...steps]);
           }
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error ? e.message : "Failed to confirm transaction";
           setDeployError(errMsg);
+          steps[2].status = "error";
+          setDeploySteps([...steps]);
           setIsDeploying(false);
-          updateStep(steps, 2, "error", onStatusUpdate, errMsg);
           return steps;
         }
-        // Step 4: deployed
-        updateStep(steps, 3, "running", onStatusUpdate);
         try {
           const safeAddress = await kit.getAddress();
           const newKit = await kit.connect({ safeAddress });
-          await newKit.isSafeDeployed();
+          const isDeployed = await newKit.isSafeDeployed();
+          if (!isDeployed) throw new Error("Safe deployment not detected");
           setDeployTxHash(txHash);
-          updateStep(steps, 3, "success", onStatusUpdate, undefined, txHash);
-          setProtocolKits((prev) => ({ ...prev, [chain.id]: newKit }));
+          steps[3].status = "success";
+          setDeploySteps([...steps]);
+          setCurrentProtocolKit(newKit);
         } catch (e: unknown) {
           const errMsg =
             e instanceof Error ? e.message : "Failed to verify Safe deployment";
           setDeployError(errMsg);
+          steps[3].status = "error";
+          setDeploySteps([...steps]);
           setIsDeploying(false);
-          updateStep(steps, 3, "error", onStatusUpdate, errMsg);
           return steps;
         }
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to deploy Safe");
-        updateStep(
-          steps,
-          0,
-          "error",
-          onStatusUpdate,
+        setDeployError(
           e instanceof Error ? e.message : "Failed to deploy Safe",
         );
+        steps[0].status = "error";
+        setDeploySteps([...steps]);
       } finally {
         // Do not setIsDeploying(false) here; let the client handle closing the modal.
       }
       return steps;
     },
-    [protocolKits, signer, connector],
+    [signer, connector],
   );
 
-  const resetSafe = useCallback(() => {
-    setProtocolKits({});
-    setSafeAddress(null);
-    setError(null);
-    setIsPredicting(false);
-    setIsDeploying(false);
-    setDeployError(null);
-    setDeployTxHash(null);
-    localStorage.removeItem("safeAddress");
-  }, []);
+  /**
+   * Connect to an existing Safe by address and chain, check if deployed, and update state
+   */
+  const connectSafe = useCallback(
+    async (safeAddress: `0x${string}`) => {
+      const steps: SafeConnectStep[] = [
+        { step: "pending", status: "idle" },
+        { step: "connecting", status: "idle" },
+        { step: "connected", status: "idle" },
+      ];
+
+      try {
+        // Step 1: pending
+        steps[0].status = "running";
+        setConnectSteps([...steps]);
+        if (!connector || !signer) {
+          setConnectError("Wallet not connected");
+          steps[0].status = "error";
+          setConnectSteps([...steps]);
+          setIsConnecting(false);
+          return;
+        }
+        const provider = await getMinimalEIP1193Provider(connector);
+        if (!provider) {
+          setConnectError("Provider not available");
+          steps[0].status = "error";
+          setConnectSteps([...steps]);
+          setIsConnecting(false);
+          return;
+        }
+        const config: SafeConfig = {
+          provider,
+          signer,
+          safeAddress,
+        };
+        const kit = await Safe.init(config);
+        const connectedKit = await kit.connect({ safeAddress });
+        setCurrentProtocolKit(connectedKit);
+        // Step 2: connecting
+        steps[0].status = "success";
+        steps[1].status = "running";
+        setConnectSteps([...steps]);
+        const deployed = await connectedKit.isSafeDeployed();
+        // Step 3: connected
+        steps[1].status = "success";
+        steps[2].status = deployed ? "success" : "error";
+        setConnectSteps([...steps]);
+        if (!deployed) {
+          setConnectError(
+            "This address is not a deployed Safe. Please check or create a new Safe.",
+          );
+        }
+      } catch (e: unknown) {
+        console.error("connectSafe error", e);
+        setConnectError(
+          e instanceof Error ? e.message : "Failed to connect to Safe",
+        );
+        steps[0].status = "error";
+        setConnectSteps([...steps]);
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [connector, signer],
+  );
 
   return (
     <SafeContext.Provider
       value={{
-        protocolKits,
-        safeAddress,
-        isPredicting,
-        isDeploying,
-        setIsDeploying,
-        error,
+        currentProtcolKit,
+        resetSafe,
+        // Predict flow
         predictSafeAddress,
+        isPredicting,
+        predictError,
+        // Deploy flow
         deploySafe,
+        isDeploying,
         deployError,
         deployTxHash,
-        resetSafe,
+        deploySteps,
         // Connection flow
         connectSafe,
         isConnecting,
         connectError,
-        isDeployed,
+        connectSteps,
       }}
     >
       {children}
     </SafeContext.Provider>
   );
 };
-
-// -- Custom Hook --
-export function useSafe() {
-  const ctx = useContext(SafeContext);
-  if (!ctx) throw new Error("useSafe must be used within a SafeProvider");
-  return ctx;
-}

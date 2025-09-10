@@ -15,7 +15,7 @@ export default function SafeDetails({
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <p className="mb-2 text-lg font-medium">Selected Networks:</p>
+        <p className="mb-2 text-lg font-medium">Selected Network:</p>
         <div className="flex flex-wrap gap-2">
           {!selectedNetwork ? (
             <span className="badge badge-outline text-base-content">

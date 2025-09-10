@@ -1,6 +1,6 @@
 "use client";
 
-import BtnBack from "@/app/components/BtnBackHistory";
+import BtnCancel from "@/app/components/BtnCancel";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import AppAddress from "@/app/components/AppAddress";
@@ -11,26 +11,29 @@ import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
 import SafeDetails from "../components/SafeDetails";
 import Stepper from "./components/Stepper";
-import DeploymentModal from "./components/DeploymentModal";
-import { useSafe } from "@/app/provider/SafeProvider";
+import { WorkflowModal } from "@/app/components/WorkflowModal";
 import { isValidAddress, havePredictionParamsChanged } from "../helpers";
 import { LastPredictionRef } from "../types";
-import { SafeDeployStep } from "@/app/provider/types";
-import { CREATE_STEPS } from "../constants";
+import { CREATE_STEPS, STEPS_DEPLOY_LABEL } from "../constants";
+import { useRouter } from "next/navigation";
+import { useSafeContext } from "@/app/hooks/useSafeContext";
 
 export default function CreateSafeClient() {
   const chains = useChains();
   const { address: signer, chain, isConnected } = useAccount();
+  const router = useRouter();
 
   const {
-    isPredicting,
-    isDeploying,
-    setIsDeploying,
     predictSafeAddress,
     deploySafe,
+    resetSafe,
+    isPredicting,
+    isDeploying,
+    deploySteps,
     deployError,
     deployTxHash,
-  } = useSafe();
+    currentProtcolKit,
+  } = useSafeContext();
 
   // Error separation
   const [predictError, setPredictError] = useState<string | null>(null);
@@ -41,10 +44,11 @@ export default function CreateSafeClient() {
   // Network selection state
   const [selectedNetwork, setSelectedNetwork] = useState<Chain>();
   useEffect(() => {
-    if (chain) {
+    if (currentStep === 0 && chain) {
       setSelectedNetwork(chain);
     }
-  }, [chain]);
+    // Do not update selectedNetwork if not at network selection step
+  }, [chain, currentStep]);
 
   function handleSelect(id: number) {
     const chain = chains.find((c) => c.id === id);
@@ -56,7 +60,7 @@ export default function CreateSafeClient() {
   // Owners state with auto-fill of connected wallet
   const [signers, setSigners] = useState<string[]>([""]);
   useEffect(() => {
-    if (signer) {
+    if (currentStep === 1 && signer) {
       setSigners((prev) => {
         // Replace first entry with new signer, keep others
         if (prev.length === 0) return [signer];
@@ -64,7 +68,8 @@ export default function CreateSafeClient() {
         return prev;
       });
     }
-  }, [signer]);
+    // Do not update signers if not at signers selection step
+  }, [signer, currentStep]);
   // Helpers to manage dynamic signer fields
   function addSignerField() {
     setSigners((prev) => [...prev, ""]);
@@ -123,9 +128,8 @@ export default function CreateSafeClient() {
   ];
 
   // Modal state for deployment progress
-  // DaisyUI modal uses dialog element, so we don't need showModal state
-  const [deployStatus, setDeployStatus] = useState<SafeDeployStep[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   // Predict Safe address when entering validation step
   useEffect(() => {
@@ -148,7 +152,6 @@ export default function CreateSafeClient() {
         const fetchPredictedAddress = async () => {
           try {
             const predictedAddress = await predictSafeAddress(
-              selectedNetwork,
               validSigners,
               threshold,
               saltNonce,
@@ -183,21 +186,15 @@ export default function CreateSafeClient() {
     saltNonce,
   ]);
 
-  // Deploy Safe on all selected chains
+  // Deploy Safe
   async function handleDeploySafe() {
+    // Clear previous state
+    resetSafe();
     setModalOpen(true);
     try {
       // Only pass valid addresses to SDK
       const validSigners = signers.filter(isValidAddress);
-      await deploySafe(
-        selectedNetwork!,
-        validSigners,
-        threshold,
-        saltNonce,
-        (stepsArr) => {
-          setDeployStatus(stepsArr);
-        },
-      );
+      await deploySafe(selectedNetwork!, validSigners, threshold, saltNonce);
     } catch (e) {
       console.error("Deployment error:", e);
     }
@@ -205,9 +202,14 @@ export default function CreateSafeClient() {
 
   function handleCloseModal() {
     setModalOpen(false);
-    setIsDeploying(false);
-    setDeployStatus([]);
-    // Optionally reset deployStatus, redirect, or reset form here
+  }
+
+  async function handleGoToSafe() {
+    const safeAddress = await currentProtcolKit?.getAddress();
+    if (safeAddress) {
+      setRedirecting(true);
+      router.push(`/safe/${safeAddress}`);
+    }
   }
 
   return (
@@ -215,7 +217,7 @@ export default function CreateSafeClient() {
       <AppSection>
         <div className="grid w-full grid-cols-6 items-center">
           <div className="self-start">
-            <BtnBack />
+            <BtnCancel href="/new-safe" />
           </div>
           <Stepper steps={CREATE_STEPS} currentStep={currentStep} />
         </div>
@@ -289,14 +291,24 @@ export default function CreateSafeClient() {
           )}
         </div>
       </AppSection>
-      {/* Modal outside of contaienr flex */}
-      <DeploymentModal
+      {/* Modal outside of container flex */}
+      <WorkflowModal
         open={modalOpen}
-        steps={deployStatus}
-        deployTxHash={deployTxHash}
-        deployError={deployError}
+        steps={deploySteps}
+        stepLabels={STEPS_DEPLOY_LABEL}
+        txHash={deployTxHash}
+        error={deployError}
         selectedNetwork={selectedNetwork}
         onClose={handleCloseModal}
+        onGoToSafe={handleGoToSafe}
+        showGoToSafe={
+          deploySteps.length > 0 &&
+          deploySteps.every((s) => s.status === "success") &&
+          !!deployTxHash &&
+          !!safePredictedAddress
+        }
+        goToSafeLabel={redirecting ? "Redirecting..." : "Go to Safe"}
+        closeLabel="Close"
       />
     </>
   );

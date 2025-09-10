@@ -1,7 +1,7 @@
 // Helper functions for SafeProvider
 import { Connector } from "wagmi";
 import { localContractNetworks } from "./localContractNetworks";
-import { SafeDeployStep, MinimalEIP1193Provider } from "./types";
+import { MinimalEIP1193Provider } from "./types";
 
 /**
  * Get a minimal EIP-1193 provider from a wagmi Connector.
@@ -48,28 +48,4 @@ export function createSafeConfig(
     },
     contractNetworks: localContractNetworks,
   };
-}
-
-/**
- * Update the status of a deployment step and invoke the status update callback.
- *
- * @param steps - Array of deployment steps
- * @param idx - Index of the step to update
- * @param status - New status for the step
- * @param onStatusUpdate - Optional callback to invoke after updating the step
- * @param error - Optional error message if the step failed
- * @param txHash - Optional transaction hash associated with the step
- */
-export function updateStep(
-  steps: SafeDeployStep[],
-  idx: number,
-  status: SafeDeployStep["status"],
-  onStatusUpdate?: (steps: SafeDeployStep[]) => void,
-  error?: string,
-  txHash?: string,
-) {
-  steps[idx].status = status;
-  if (error) steps[idx].error = error;
-  if (txHash) steps[idx].txHash = txHash;
-  onStatusUpdate?.([...steps]);
 }
