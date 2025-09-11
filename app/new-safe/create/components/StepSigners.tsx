@@ -8,8 +8,8 @@ interface StepSignersProps {
   removeSignerField: (idx: number) => void;
   handleSignerChange: (idx: number, value: string) => void;
   setThreshold: (value: number) => void;
-  onBack: () => void;
   onNext: () => void;
+  onBack: () => void;
 }
 
 export default function StepSigners({
@@ -19,8 +19,8 @@ export default function StepSigners({
   removeSignerField,
   handleSignerChange,
   setThreshold,
-  onBack,
   onNext,
+  onBack,
 }: StepSignersProps) {
   // Validation logic
   const addressPattern = /^0x[a-fA-F0-9]{40}$/;
@@ -59,10 +59,10 @@ export default function StepSigners({
         <>
           <button
             type="button"
-            className="btn btn-ghost btn-secondary rounded"
-            onClick={onBack}
+            className="btn btn-secondary"
+            onClick={() => onBack()}
           >
-            Back
+            Back to Networks
           </button>
           <button
             type="button"

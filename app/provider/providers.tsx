@@ -12,7 +12,7 @@ import {
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import { config } from "../config";
-import { SafeProvider } from "./SafeProvider";
+import { SafeWalletProvider } from "./SafeWalletProvider";
 import type { State } from "wagmi";
 
 // From https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr
@@ -68,7 +68,7 @@ export default function Providers({
             }),
           }}
         >
-          <SafeProvider>{children}</SafeProvider>
+          <SafeWalletProvider>{children}</SafeWalletProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

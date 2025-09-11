@@ -4,63 +4,44 @@ import BtnCancel from "@/app/components/BtnCancel";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import AppAddress from "@/app/components/AppAddress";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useChains } from "wagmi";
-import { type Chain } from "viem";
-import StepNetworks from "./components/StepNetworks";
 import StepSigners from "./components/StepSigners";
+import StepNetworks from "./components/StepNetworks";
 import SafeDetails from "../components/SafeDetails";
 import Stepper from "./components/Stepper";
 import { WorkflowModal } from "@/app/components/WorkflowModal";
-import { isValidAddress, havePredictionParamsChanged } from "../helpers";
-import { LastPredictionRef } from "../types";
+import { isValidAddress } from "../helpers";
 import { CREATE_STEPS, STEPS_DEPLOY_LABEL } from "../constants";
 import { useRouter } from "next/navigation";
-import { useSafeContext } from "@/app/hooks/useSafeContext";
+import useNewSafe from "@/app/hooks/useNewSafe";
+import { SafeDeployStep } from "@/app/utils/types";
 
 export default function CreateSafeClient() {
+  const { address: signer, chain } = useAccount();
   const chains = useChains();
-  const { address: signer, chain, isConnected } = useAccount();
   const router = useRouter();
 
-  const {
-    predictSafeAddress,
-    deploySafe,
-    resetSafe,
-    isPredicting,
-    isDeploying,
-    deploySteps,
-    deployError,
-    deployTxHash,
-    currentProtcolKit,
-  } = useSafeContext();
-
-  // Error separation
+  // Local UI state for feedback
+  const [isPredicting, setIsPredicting] = useState(false);
   const [predictError, setPredictError] = useState<string | null>(null);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>([]);
+  const [deployError, setDeployError] = useState<string | null>(null);
+  const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
+
+  const { predictNewSafeAddress, deployNewSafe } = useNewSafe();
 
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Network selection state
-  const [selectedNetwork, setSelectedNetwork] = useState<Chain>();
-  useEffect(() => {
-    if (currentStep === 0 && chain) {
-      setSelectedNetwork(chain);
-    }
-    // Do not update selectedNetwork if not at network selection step
-  }, [chain, currentStep]);
-
-  function handleSelect(id: number) {
-    const chain = chains.find((c) => c.id === id);
-    if (chain) {
-      setSelectedNetwork(chain);
-    }
-  }
+  // Multi-chain selection
+  const [selectedChains, setSelectedChains] = useState<string[]>([]);
 
   // Owners state with auto-fill of connected wallet
   const [signers, setSigners] = useState<string[]>([""]);
   useEffect(() => {
-    if (currentStep === 1 && signer) {
+    if (currentStep === 0 && signer) {
       setSigners((prev) => {
         // Replace first entry with new signer, keep others
         if (prev.length === 0) return [signer];
@@ -96,23 +77,17 @@ export default function CreateSafeClient() {
     return Date.now().toString();
   });
 
-  // Ref to cache last-used params and address
-  const lastPredictionRef = useRef<LastPredictionRef>({
-    network: {} as Chain,
-    signers: [],
-    threshold: 1,
-    address: null,
-  });
-
-  // Step content as components
+  // Step content as components (now with StepNetworks)
   const stepContent = [
+    // Step 0: Chain selection
     <StepNetworks
-      key="networks"
+      key="chains"
       chains={chains}
-      selectedNetwork={isConnected ? selectedNetwork?.id : undefined}
-      handleSelect={handleSelect}
+      selectedChains={selectedChains}
+      setSelectedChains={setSelectedChains}
       onNext={() => setCurrentStep(1)}
     />,
+    // Step 1: Owners/Threshold
     <StepSigners
       key="signers"
       signers={signers}
@@ -121,8 +96,8 @@ export default function CreateSafeClient() {
       removeSignerField={removeSignerField}
       handleSignerChange={handleSignerChange}
       setThreshold={setThreshold}
-      onBack={() => setCurrentStep(0)}
       onNext={() => setCurrentStep(2)}
+      onBack={() => setCurrentStep(0)}
     />,
     null,
   ];
@@ -131,72 +106,76 @@ export default function CreateSafeClient() {
   const [modalOpen, setModalOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
-  // Predict Safe address when entering validation step
+  // Predict Safe address for all selected chains when entering validation step
+  const [predictedAddresses, setPredictedAddresses] = useState<
+    Record<string, `0x${string}` | null>
+  >({});
   useEffect(() => {
     if (
       currentStep === 2 &&
-      selectedNetwork &&
+      selectedChains.length > 0 &&
       signers.filter(Boolean).length > 0 &&
       threshold > 0
     ) {
-      // Only pass valid addresses to SDK
+      setIsPredicting(true);
+      setPredictError(null);
       const validSigners = signers.filter(isValidAddress);
-      // Compare current params to lastPredictionRef
-      const paramsChanged = havePredictionParamsChanged(
-        lastPredictionRef.current,
-        { network: selectedNetwork, signers, threshold },
-      );
-      if (paramsChanged) {
-        setSafePredictedAddress(null);
-        setPredictError(null);
-        const fetchPredictedAddress = async () => {
+      const fetchPredictions = async () => {
+        const results: Record<string, `0x${string}` | null> = {};
+        for (const chainId of selectedChains) {
           try {
-            const predictedAddress = await predictSafeAddress(
+            const predictedAddress = await predictNewSafeAddress(
               validSigners,
               threshold,
               saltNonce,
+              chainId,
             );
-            setSafePredictedAddress(predictedAddress);
-            lastPredictionRef.current = {
-              network: selectedNetwork,
-              signers: [...signers],
-              threshold,
-              address: predictedAddress,
-            };
-          } catch (e) {
-            setPredictError(
-              e instanceof Error ? e.message : "Prediction failed",
-            );
+            results[chainId] = predictedAddress;
+          } catch {
+            results[chainId] = null;
           }
-        };
-        fetchPredictedAddress();
-      } else {
-        // Params unchanged, reuse cached address
-        setSafePredictedAddress(lastPredictionRef.current.address);
-      }
+        }
+        setPredictedAddresses(results);
+        setIsPredicting(false);
+      };
+      fetchPredictions();
     }
   }, [
     currentStep,
-    selectedNetwork,
+    selectedChains,
     signers,
     threshold,
-    chains,
-    predictSafeAddress,
-    signer,
+    predictNewSafeAddress,
     saltNonce,
   ]);
 
   // Deploy Safe
   async function handleDeploySafe() {
-    // Clear previous state
-    resetSafe();
     setModalOpen(true);
+    setIsDeploying(true);
+    setDeployError(null);
+    setDeploySteps([
+      { step: "txCreated", status: "idle" },
+      { step: "txSent", status: "idle" },
+      { step: "confirmed", status: "idle" },
+      { step: "deployed", status: "idle" },
+    ]);
+    setDeployTxHash(null);
     try {
-      // Only pass valid addresses to SDK
       const validSigners = signers.filter(isValidAddress);
-      await deploySafe(selectedNetwork!, validSigners, threshold, saltNonce);
+      const steps = await deployNewSafe(validSigners, threshold, saltNonce);
+      setDeploySteps(steps);
+      // If deployment successful, set txHash (if available)
+      const deployedStep = steps.find(
+        (s) => s.step === "deployed" && s.status === "success",
+      );
+      if (deployedStep && deployedStep.txHash) {
+        setDeployTxHash(deployedStep.txHash);
+      }
     } catch (e) {
-      console.error("Deployment error:", e);
+      setDeployError("Deployment error");
+    } finally {
+      setIsDeploying(false);
     }
   }
 
@@ -205,10 +184,9 @@ export default function CreateSafeClient() {
   }
 
   async function handleGoToSafe() {
-    const safeAddress = await currentProtcolKit?.getAddress();
-    if (safeAddress) {
+    if (safePredictedAddress) {
       setRedirecting(true);
-      router.push(`/safe/${safeAddress}`);
+      router.push(`/safe/${safePredictedAddress}`);
     }
   }
 
@@ -219,13 +197,34 @@ export default function CreateSafeClient() {
           <div className="self-start">
             <BtnCancel href="/new-safe" />
           </div>
-          <Stepper steps={CREATE_STEPS} currentStep={currentStep} />
+          <Stepper
+            steps={["Networks", ...CREATE_STEPS]}
+            currentStep={currentStep}
+          />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center">
           {currentStep === 2 ? (
             <AppCard title="Review & Validate Safe Account" className="w-full">
+              <div className="mb-4">
+                <h4 className="font-semibold">Selected Networks:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedChains.map((chainId) => {
+                    const chainObj = chains.find(
+                      (c) => c.id.toString() === chainId,
+                    );
+                    return (
+                      <span
+                        key={chainId}
+                        className="badge badge-secondary badge-outline"
+                      >
+                        {chainObj ? chainObj.name : chainId}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
               <SafeDetails
-                selectedNetwork={selectedNetwork!}
+                selectedNetwork={chain}
                 signers={signers}
                 threshold={threshold}
               />
@@ -233,18 +232,22 @@ export default function CreateSafeClient() {
               <div className="flex flex-col gap-4">
                 {isPredicting && (
                   <div className="flex items-center gap-2">
-                    <span className="loading loading-spinner loading-md" />
-                    <span>Predicting Safe address...</span>
+                    <span>Predicting Safe address</span>
+                    <span className="loading loading-dots loading-xs" />
                   </div>
                 )}
-                {safePredictedAddress && (
+                {Object.keys(predictedAddresses).length > 0 && (
                   <div>
                     <p className="mb-1 text-lg font-semibold">
                       Predicted Safe Address:
                     </p>
                     <div className="flex flex-wrap gap-2 p-2">
                       <AppAddress
-                        address={safePredictedAddress}
+                        address={
+                          Object.values(predictedAddresses).find(
+                            (addr) => !!addr,
+                          ) || "N/A"
+                        }
                         className="text-sm"
                       />
                     </div>
@@ -259,13 +262,16 @@ export default function CreateSafeClient() {
                     className="btn btn-secondary"
                     onClick={() => setCurrentStep(1)}
                   >
-                    Back to Signers
+                    Back to Owners
                   </button>
                   <button
                     type="button"
                     className="btn btn-primary"
                     disabled={
-                      !safePredictedAddress || isPredicting || isDeploying
+                      selectedChains.length === 0 ||
+                      Object.values(predictedAddresses).some((addr) => !addr) ||
+                      isPredicting ||
+                      isDeploying
                     }
                     onClick={handleDeploySafe}
                   >
@@ -281,7 +287,7 @@ export default function CreateSafeClient() {
               <div className="col-span-10 col-start-2 md:col-span-5 md:col-start-auto">
                 <AppCard title="Safe Account Preview">
                   <SafeDetails
-                    selectedNetwork={isConnected ? selectedNetwork : undefined}
+                    selectedNetwork={chain}
                     signers={signers}
                     threshold={threshold}
                   />
@@ -298,14 +304,14 @@ export default function CreateSafeClient() {
         stepLabels={STEPS_DEPLOY_LABEL}
         txHash={deployTxHash}
         error={deployError}
-        selectedNetwork={selectedNetwork}
+        selectedNetwork={chain}
         onClose={handleCloseModal}
         onGoToSafe={handleGoToSafe}
         showGoToSafe={
           deploySteps.length > 0 &&
           deploySteps.every((s) => s.status === "success") &&
           !!deployTxHash &&
-          !!safePredictedAddress
+          !!Object.values(predictedAddresses).every((addr) => !!addr)
         }
         goToSafeLabel={redirecting ? "Redirecting..." : "Go to Safe"}
         closeLabel="Close"

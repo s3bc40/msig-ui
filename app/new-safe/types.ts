@@ -1,4 +1,4 @@
-import { SafeDeployStep } from "@/app/provider/types";
+import { SafeDeployStep } from "@/app/utils/types";
 import { Chain } from "viem";
 
 export interface LastPredictionRef {

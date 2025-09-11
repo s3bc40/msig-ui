@@ -22,7 +22,7 @@ export default function HomePageClient() {
         <div className="flex w-full flex-col items-center gap-6">
           {isConnected ? (
             <Link
-              href="/new-safe"
+              href="/accounts"
               className="btn btn-primary btn-soft w-full rounded py-4 text-lg"
             >
               Continue with {address?.slice(0, 6) + "..." + address?.slice(-4)}

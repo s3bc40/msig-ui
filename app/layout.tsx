@@ -3,6 +3,7 @@ import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./provider/providers";
 import NavBar from "./components/NavBar";
+import LoadingOverlay from "./components/LoadingOverlay";
 import { headers } from "next/headers";
 import { cookieToInitialState } from "wagmi";
 import { config } from "./config";
@@ -39,6 +40,7 @@ export default async function RootLayout({
         className={`min-h-screen ${roboto.variable} ${robotoMono.variable} bg-base-300 antialiased`}
       >
         <Providers initialState={initialState}>
+          <LoadingOverlay />
           <NavBar />
           <main className="flex flex-1">{children}</main>
         </Providers>

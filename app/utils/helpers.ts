@@ -1,7 +1,12 @@
 // Helper functions for SafeProvider
 import { Connector } from "wagmi";
 import { localContractNetworks } from "./localContractNetworks";
-import { MinimalEIP1193Provider } from "./types";
+import {
+  MinimalEIP1193Provider,
+  SafeConfigConnection,
+  SafeConfigPrediction,
+} from "./types";
+import { anvil } from "viem/chains";
 
 /**
  * Get a minimal EIP-1193 provider from a wagmi Connector.
@@ -11,9 +16,10 @@ import { MinimalEIP1193Provider } from "./types";
  */
 export async function getMinimalEIP1193Provider(
   connector: Connector | undefined,
+  chainId: number | undefined,
 ): Promise<MinimalEIP1193Provider | null> {
   if (!connector) return null;
-  const rawProvider = await connector.getProvider();
+  const rawProvider = await connector.getProvider({ chainId });
   const baseProvider = rawProvider as MinimalEIP1193Provider;
   return {
     request: baseProvider.request,
@@ -32,13 +38,16 @@ export async function getMinimalEIP1193Provider(
  * @param saltNonce - Optional salt nonce for address prediction
  * @returns Configuration object for Safe SDK and ProtocolKit
  */
-export function createSafeConfig(
+
+// Factory for prediction/deployment config
+export function createPredictionConfig(
   provider: MinimalEIP1193Provider,
   signer: string | undefined,
+  chainId: number,
   owners: `0x${string}`[],
   threshold: number,
   saltNonce?: string,
-) {
+): SafeConfigPrediction {
   return {
     provider,
     signer,
@@ -46,6 +55,21 @@ export function createSafeConfig(
       safeAccountConfig: { owners, threshold },
       safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
     },
-    contractNetworks: localContractNetworks,
+    contractNetworks: chainId === anvil.id ? localContractNetworks : undefined,
+  };
+}
+
+// Factory for connection config
+export function createConnectionConfig(
+  provider: MinimalEIP1193Provider,
+  signer: string | undefined,
+  chainId: number,
+  safeAddress: `0x${string}`,
+): SafeConfigConnection {
+  return {
+    provider,
+    signer,
+    safeAddress,
+    contractNetworks: chainId === anvil.id ? localContractNetworks : undefined,
   };
 }

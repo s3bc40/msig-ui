@@ -1,55 +1,48 @@
 "use client";
 
-import { useSafeAccount } from "@/app/hooks/useSafeAccount";
 import AppAddress from "@/app/components/AppAddress";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import { useAccount } from "wagmi";
 import { useEffect, useState } from "react";
-import { useSafeContext } from "@/app/hooks/useSafeContext";
+import { useSafeContext } from "@/app/provider/SafeProvider";
 import { useRouter } from "next/navigation";
+import useSafe from "@/app/hooks/useSafe";
 
 interface SafeInfoClientProps {
-  chainName?: string;
   safeAddress: `0x${string}`;
 }
 
-export default function SafeInfoClient({
-  safeAddress,
-  chainName,
-}: SafeInfoClientProps) {
+export default function SafeInfoClient({ safeAddress }: SafeInfoClientProps) {
   const router = useRouter();
-  const { address, chain } = useAccount();
-
+  const { address: signer, chain } = useAccount();
+  const { isConnecting } = useSafeContext();
   const {
     safeInfo,
     isDeployed,
     isLoading,
     error,
+    connectSafe,
     buildTransaction,
     signTransaction,
     broadcastTransaction,
-  } = useSafeAccount(safeAddress, chain);
+  } = useSafe(safeAddress);
 
-  const { connectSafe, isConnecting } = useSafeContext();
   const [autoConnected, setAutoConnected] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  // Auto-connect logic: only runs on mount
+  // Auto-connect logic: runs on mount or when safeAddress or chain changes
   useEffect(() => {
-    const stored =
-      typeof window !== "undefined"
-        ? localStorage.getItem("safeAddress")
-        : undefined;
-    if (stored && safeAddress && stored === safeAddress) {
-      connectSafe(safeAddress as `0x${string}`)
+    if (safeAddress && chain) {
+      connectSafe()
         .then(() => setAutoConnected(true))
         .catch(() => setAutoConnected(false));
       setShouldRedirect(false);
     } else if (safeAddress) {
       setShouldRedirect(true);
     }
-  }, [safeAddress, connectSafe]);
+    // Only run on safeAddress or chain change
+  }, [safeAddress, chain, connectSafe]);
 
   // Example: Dummy tx data for demonstration
   const dummyTx = {
@@ -77,8 +70,6 @@ export default function SafeInfoClient({
       await broadcastTransaction({});
     } catch (e) {}
   };
-
-  console.log("safeInfo", safeInfo, "isDeployed", isDeployed);
 
   // Show loading spinner if connecting or loading
   if (isConnecting || isLoading) {
@@ -152,9 +143,9 @@ export default function SafeInfoClient({
           <span className="font-semibold">Address:</span>
           <AppAddress address={safeAddress} className="ml-2" />
         </div>
-        {chainName && (
+        {chain && (
           <div className="mb-2">
-            <span className="font-semibold">Chain:</span> {chainName}
+            <span className="font-semibold">Chain:</span> {chain.name}
           </div>
         )}
         <div className="mb-2">
