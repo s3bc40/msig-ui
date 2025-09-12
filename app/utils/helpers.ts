@@ -15,10 +15,9 @@ import {
  */
 export async function getMinimalEIP1193Provider(
   connector: Connector | undefined,
-  chainId: number | undefined,
 ): Promise<MinimalEIP1193Provider | null> {
   if (!connector) return null;
-  const rawProvider = await connector.getProvider({ chainId });
+  const rawProvider = await connector.getProvider();
   const baseProvider = rawProvider as MinimalEIP1193Provider;
   return {
     request: baseProvider.request,
@@ -40,9 +39,8 @@ export async function getMinimalEIP1193Provider(
 
 // Factory for prediction/deployment config
 export function createPredictionConfig(
-  provider: MinimalEIP1193Provider,
+  provider: MinimalEIP1193Provider | string,
   signer: string | undefined,
-  chainId: number,
   owners: `0x${string}`[],
   threshold: number,
   saltNonce?: string,
@@ -62,7 +60,6 @@ export function createPredictionConfig(
 export function createConnectionConfig(
   provider: MinimalEIP1193Provider,
   signer: string | undefined,
-  chainId: number,
   safeAddress: `0x${string}`,
 ): SafeConfigConnection {
   return {

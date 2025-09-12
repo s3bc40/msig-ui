@@ -7,45 +7,38 @@ import {
   createPredictionConfig,
   createConnectionConfig,
 } from "../utils/helpers";
-import {
-  SafeDeployStep,
-  SafeConnectStep,
-  PendingSafeStatus,
-  PayMethod,
-} from "../utils/types";
+import { SafeDeployStep, PendingSafeStatus, PayMethod } from "../utils/types";
 import { waitForTransactionReceipt } from "viem/actions";
-import { zeroAddress } from "viem";
-import { useAccount } from "wagmi";
+import { Chain, zeroAddress } from "viem";
+import { useAccount, useSwitchChain } from "wagmi";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
 
 export default function useNewSafe() {
   // Wagmi hooks
-  const { address: signer, connector, chain } = useAccount();
+  const { address: signer, connector } = useAccount();
+  const { switchChain } = useSwitchChain();
 
   // Get SafeWalletProvider context
-  const { addSafe, safeWalletData } = useSafeWalletContext();
+  const { addSafe } = useSafeWalletContext();
 
   const predictNewSafeAddress = useCallback(
     async (
       owners: `0x${string}`[],
       threshold: number,
-      chainId: number,
+      chain: Chain,
       saltNonce: string,
     ): Promise<{ address: `0x${string}`; isDeployed: boolean }> => {
       let kit: Safe | null = null;
-      const provider = await getMinimalEIP1193Provider(connector, chainId);
-      if (!provider) {
-        return { address: zeroAddress, isDeployed: false };
-      }
       try {
         const config: SafeConfig = createPredictionConfig(
-          provider,
+          chain.rpcUrls.default.http[0],
           signer,
-          chainId,
           owners,
           threshold,
           saltNonce,
         );
+        // @FIXME issues on config diff between chains (multi deploy)
+        console.log("Prediction config:", config);
         kit = await Safe.init(config);
         if (kit) {
           const safeAddress = await kit.getAddress();
@@ -57,14 +50,16 @@ export default function useNewSafe() {
       }
       return { address: zeroAddress, isDeployed: false };
     },
-    [connector, signer],
+    [connector, signer, switchChain],
   );
 
   const deployNewSafe = useCallback(
     async (
       owners: `0x${string}`[],
       threshold: number,
-      saltNonce?: string,
+      chain: Chain,
+      saltNonce: string | undefined,
+      setDeploySteps: (steps: SafeDeployStep[]) => void,
     ): Promise<SafeDeployStep[]> => {
       const steps: SafeDeployStep[] = [
         { step: "txCreated", status: "idle" },
@@ -74,16 +69,18 @@ export default function useNewSafe() {
       ];
       try {
         steps[0].status = "running";
-        const provider = await getMinimalEIP1193Provider(connector, chain?.id);
+        setDeploySteps([...steps]);
+        switchChain?.({ chainId: chain.id });
+        const provider = await getMinimalEIP1193Provider(connector);
         if (!provider) {
           steps[0].status = "error";
           steps[0].error = "No provider found";
+          setDeploySteps([...steps]);
           return steps;
         }
         const config: SafeConfig = createPredictionConfig(
           provider,
           signer,
-          chain?.id ?? 0,
           owners,
           threshold,
           saltNonce,
@@ -95,9 +92,11 @@ export default function useNewSafe() {
           kitClient = await kit.getSafeProvider().getExternalSigner();
           steps[0].status = "success";
           steps[1].status = "running";
+          setDeploySteps([...steps]);
         } catch (err) {
           steps[0].status = "error";
           steps[0].error = err instanceof Error ? err.message : String(err);
+          setDeploySteps([...steps]);
           return steps;
         }
         try {
@@ -110,9 +109,11 @@ export default function useNewSafe() {
           steps[1].status = "success";
           steps[1].txHash = txHash;
           steps[2].status = "running";
+          setDeploySteps([...steps]);
         } catch (err) {
           steps[1].status = "error";
           steps[1].error = err instanceof Error ? err.message : String(err);
+          setDeploySteps([...steps]);
           return steps;
         }
         try {
@@ -121,10 +122,12 @@ export default function useNewSafe() {
             steps[2].status = "success";
             steps[2].txHash = txHash;
             steps[3].status = "running";
+            setDeploySteps([...steps]);
           }
         } catch (err) {
           steps[2].status = "error";
           steps[2].error = err instanceof Error ? err.message : String(err);
+          setDeploySteps([...steps]);
           return steps;
         }
         try {
@@ -134,10 +137,11 @@ export default function useNewSafe() {
           if (!isDeployed) throw new Error("Safe deployment not detected");
           steps[3].status = "success";
           steps[3].txHash = txHash;
+          setDeploySteps([...steps]);
           // Add to addedSafes if deployed, else to undeployedSafes
           if (isDeployed) {
             addSafe(
-              String(chain?.id ?? 0),
+              String(chain.id),
               safeAddress,
               {
                 owners,
@@ -147,7 +151,7 @@ export default function useNewSafe() {
             );
           } else {
             addSafe(
-              String(chain?.id ?? 0),
+              String(chain.id),
               safeAddress,
               {
                 props: {
@@ -172,80 +176,84 @@ export default function useNewSafe() {
           steps[3].status = "error";
           steps[3].error = err instanceof Error ? err.message : String(err);
           steps[3].txHash = txHash;
+          setDeploySteps([...steps]);
           return steps;
         }
       } catch (err) {
         steps[0].status = "error";
         steps[0].error = err instanceof Error ? err.message : String(err);
+        setDeploySteps([...steps]);
       }
       return steps;
     },
-    [connector, signer, chain, addSafe],
+    [connector, signer, addSafe, switchChain],
   );
 
   const connectNewSafe = useCallback(
     async (
       safeAddress: `0x${string}`,
-      chainId?: string | number,
-    ): Promise<void> => {
-      const steps: SafeConnectStep[] = [
-        { step: "pending", status: "idle" },
-        { step: "connecting", status: "idle" },
-        { step: "connected", status: "idle" },
-      ];
+      chainId: number,
+    ): Promise<
+      { owners: string[]; threshold: number } | { error: string } | null
+    > => {
       try {
-        steps[0].status = "running";
-        if (!connector || !signer || !(chainId ?? chain?.id)) {
-          steps[0].status = "error";
-          return;
+        if (!connector || !signer || !chainId) {
+          return { error: "Missing wallet connector, signer, or chainId." };
         }
-        const resolvedChainId = chainId ?? chain?.id;
-        const provider = await getMinimalEIP1193Provider(
-          connector,
-          Number(resolvedChainId),
-        );
+        switchChain?.({ chainId });
+        const provider = await getMinimalEIP1193Provider(connector);
         if (!provider) {
-          steps[0].status = "error";
-          return;
+          return {
+            error: "Could not get EIP-1193 provider for selected network.",
+          };
         }
-        const config = createConnectionConfig(
-          provider,
-          signer,
-          Number(resolvedChainId),
-          safeAddress,
-        );
+        const config = createConnectionConfig(provider, signer, safeAddress);
         // Initialize Safe SDK
-        const kit = await Safe.init(config);
-        const deployed = await kit.isSafeDeployed();
+        let kit;
+        try {
+          kit = await Safe.init(config);
+        } catch (err) {
+          return {
+            error:
+              "Failed to initialize Safe SDK: " +
+              (err instanceof Error ? err.message : String(err)),
+          };
+        }
+        let deployed;
+        try {
+          deployed = await kit.isSafeDeployed();
+        } catch (err) {
+          return {
+            error:
+              "Failed to check Safe deployment: " +
+              (err instanceof Error ? err.message : String(err)),
+          };
+        }
         if (!deployed) {
-          steps[0].status = "error";
-          return;
+          return { error: "Safe is not deployed on the selected network." };
         }
-        // Add to addedSafes if not present
-        if (
-          !safeWalletData.data.addedSafes[String(resolvedChainId)]?.[
-            safeAddress
-          ]
-        ) {
-          addSafe(
-            String(resolvedChainId),
-            safeAddress,
-            {
-              owners: [],
-              threshold: 0,
-            },
-            true,
-          );
+        // Fetch owners and threshold from the contract
+        let owners, threshold;
+        try {
+          owners = await kit.getOwners();
+          threshold = await kit.getThreshold();
+        } catch (err) {
+          return {
+            error:
+              "Failed to fetch Safe owners/threshold: " +
+              (err instanceof Error ? err.message : String(err)),
+          };
         }
-        steps[0].status = "success";
-        steps[1].status = "running";
-        steps[1].status = "success";
-        steps[2].status = deployed ? "success" : "error";
-      } catch {
-        steps[0].status = "error";
+        return { owners, threshold };
+      } catch (err) {
+        return {
+          error:
+            "Unexpected error: " +
+            (err instanceof Error ? err.message : String(err)),
+        };
       }
     },
-    [connector, signer, chain, addSafe, safeWalletData],
+    [connector, signer, switchChain],
   );
 
   return {

@@ -3,168 +3,123 @@
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import BtnCancel from "@/app/components/BtnCancel";
-import { useState, useEffect } from "react";
-import { WorkflowModal } from "@/app/components/WorkflowModal";
-import { useAccount, useChains } from "wagmi";
-import { STEPS_CONNECT_LABEL } from "../constants";
+import { useState } from "react";
+import { useChains } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import useNewSafe from "@/app/hooks/useNewSafe";
-import { SafeConnectStep } from "@/app/utils/types";
 
 export default function ConnectSafeClient() {
-  const { chain } = useAccount();
   const chains = useChains();
-  const { safeWalletData } = useSafeWalletContext();
+  const { addSafe } = useSafeWalletContext();
   const { connectNewSafe } = useNewSafe();
   const router = useRouter();
 
-  // Single chain selection for connection
+  // State for address, chain, error, loading
+  const [safeAddress, setSafeAddress] = useState<`0x${string}`>(
+    "" as `0x${string}`,
+  );
   const [selectedChain, setSelectedChain] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Local UI state for connection feedback
-  const [safeAddress, setSafeAddress] = useState<`0x${string}`>();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [connectSteps, setConnectSteps] = useState<SafeConnectStep[]>([]);
-
-  // Autofill safeAddress from localStorage if present
-  useEffect(() => {
-    const stored = localStorage.getItem("safeAddress");
-    if (stored && /^0x[a-fA-F0-9]{40}$/.test(stored)) {
-      setSafeAddress(stored as `0x${string}`);
-    }
-  }, []);
-
-  // ...rest of the component logic and return statement...
-
-  // Check if the Safe is deployed on the selected chain using SafeWalletData
-  const [isDeployed, setIsDeployed] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (!safeAddress || !selectedChain) {
-      setIsDeployed(null);
+  // Add Safe workflow handler
+  async function handleAddSafe() {
+    setLoading(true);
+    setError(null);
+    // Validate address
+    if (!/^0x[a-fA-F0-9]{40}$/.test(safeAddress)) {
+      setError("Invalid Safe address");
+      setLoading(false);
       return;
     }
-    const isAdded =
-      safeWalletData.data.addedSafes[selectedChain]?.[safeAddress];
-    setIsDeployed(!!isAdded);
-  }, [safeAddress, selectedChain, safeWalletData]);
-
-  async function handleConnect() {
+    // Validate chain
     if (!selectedChain) {
-      alert("Please select a network.");
+      setError("Please select a network");
+      setLoading(false);
       return;
     }
-    setModalOpen(true);
-    setIsConnecting(true);
-    setConnectError(null);
-    setConnectSteps([
-      { step: "pending", status: "running" },
-      { step: "connecting", status: "idle" },
-      { step: "connected", status: "idle" },
-    ]);
+    // Optionally check deployment
     try {
-      // Pass selectedChain to connectNewSafe
-      await connectNewSafe(safeAddress as `0x${string}`, selectedChain);
-      setConnectSteps([
-        { step: "pending", status: "success" },
-        { step: "connecting", status: "success" },
-        { step: "connected", status: "success" },
-      ]);
-    } catch {
-      setConnectError("Failed to connect to Safe");
-      setConnectSteps([
-        { step: "pending", status: "error" },
-        { step: "connecting", status: "idle" },
-        { step: "connected", status: "idle" },
-      ]);
+      const safeMeta = await connectNewSafe(safeAddress, Number(selectedChain));
+      if (!safeMeta) {
+        setError("Failed to connect or add Safe");
+        setLoading(false);
+        return;
+      }
+      if ("error" in safeMeta) {
+        setError(safeMeta.error);
+        setLoading(false);
+        return;
+      }
+      addSafe(selectedChain, safeAddress, safeMeta, true);
+      router.push("/accounts");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to connect or add Safe",
+      );
     } finally {
-      setIsConnecting(false);
+      setLoading(false);
     }
   }
-
-  function handleCloseModal() {
-    setModalOpen(false);
-  }
-
   return (
-    <AppSection>
-      <div>
-        <BtnCancel href="/new-safe" />
+    <AppSection className="flex min-h-screen items-center">
+      <div className="self-start">
+        <BtnCancel href="/accounts" />
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center">
-        <AppCard title="Connect to Safe">
-          <p className="text-base-content mb-4">
-            Enter your Safe address and select networks to connect and manage
-            your multi-signature wallet.
-          </p>
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="mb-2 block font-semibold">Safe Address:</label>
-              <input
-                type="text"
-                className="input input-bordered validator font-mono"
-                placeholder="0x..."
-                value={safeAddress}
-                pattern="^0x[a-fA-F0-9]{40}$"
-                onChange={(e) =>
-                  setSafeAddress(e.target.value as `0x${string}`)
-                }
-                disabled={isConnecting}
-                required
-              />
-              <div className="validator-hint">Invalid address format</div>
-            </div>
-            <div>
-              <label className="mb-2 block font-semibold">
-                Select Network:
-              </label>
-              <select
-                className="select select-bordered w-full"
-                value={selectedChain}
-                onChange={(e) => setSelectedChain(e.target.value)}
-                disabled={isConnecting}
-                required
-              >
-                <option value="" disabled>
-                  Choose a network
-                </option>
-                {chains.map((chain) => (
-                  <option key={chain.id} value={chain.id.toString()}>
-                    {chain.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {selectedChain && (
-              <div className="flex flex-wrap gap-2">
-                <span className="badge badge-secondary badge-outline">
-                  {chains.find((c) => c.id.toString() === selectedChain)
-                    ?.name || selectedChain}
-                </span>
-              </div>
-            )}
+      <AppCard
+        title={
+          <div className="flex w-full items-center justify-between">
+            Add Safe Account
           </div>
-        </AppCard>
-      </div>
-      <WorkflowModal
-        open={modalOpen}
-        steps={connectSteps}
-        stepLabels={STEPS_CONNECT_LABEL}
-        txHash={null}
-        error={
-          connectError ||
-          (isDeployed === false
-            ? "This address is not a deployed Safe on the selected network."
-            : null)
         }
-        selectedNetwork={chains.find((c) => c.id.toString() === selectedChain)}
-        onClose={handleCloseModal}
-        showGoToAccounts={isDeployed === true && !connectError}
-        closeLabel="Close"
-      />
+        className="w-full max-w-md"
+      >
+        <div className="text-base-content text-sm">
+          You can only add Safe accounts that are already deployed on the
+          selected network. If your Safe is not yet deployed, please use the
+          Create Safe flow.
+        </div>
+        <fieldset className="fieldset w-full">
+          <legend className="fieldset-legend">Safe Address</legend>
+          <input
+            type="text"
+            className="input validator flex-1 font-mono"
+            placeholder="0x..."
+            value={safeAddress}
+            onChange={(e) => setSafeAddress(e.target.value as `0x${string}`)}
+            pattern="^0x[a-fA-F0-9]{40}$"
+            required
+            disabled={loading}
+          />
+        </fieldset>
+        <div className="mb-4">
+          <label className="mb-2 block font-semibold">Select Network</label>
+          <select
+            className="select select-bordered w-full"
+            value={selectedChain}
+            onChange={(e) => setSelectedChain(e.target.value)}
+            disabled={loading}
+          >
+            <option value="" disabled>
+              Choose a network
+            </option>
+            {chains.map((chain) => (
+              <option key={chain.id} value={chain.id.toString()}>
+                {chain.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {error && <div className="alert alert-error mb-4">{error}</div>}
+        <button
+          className="btn btn-primary w-full"
+          onClick={handleAddSafe}
+          disabled={loading}
+        >
+          {loading ? "Adding..." : "Add Safe"}
+        </button>
+      </AppCard>
     </AppSection>
   );
 }

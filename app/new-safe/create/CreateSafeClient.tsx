@@ -134,7 +134,7 @@ export default function CreateSafeClient() {
             result = await predictNewSafeAddress(
               owners,
               threshold,
-              chain.id,
+              chain,
               saltNonce,
             );
           } catch {
@@ -151,7 +151,6 @@ export default function CreateSafeClient() {
         if (allMatch && !anyDeployed) {
           return { safeAddress: addresses[0], saltNonce, predictions };
         }
-        console.log("Salt nonce", saltNonce);
         saltNonce = (parseInt(saltNonce) + 1).toString();
       }
       throw new Error("Could not find consistent Safe address across chains");
@@ -240,7 +239,9 @@ export default function CreateSafeClient() {
       const steps = await deployNewSafe(
         validSigners,
         threshold,
+        selectedChains[0],
         saltNonce.toString(),
+        setDeploySteps,
       );
       setDeploySteps(steps);
       // Set txHash from any step that has it

@@ -23,7 +23,7 @@ export type MinimalEIP1193Provider = {
 
 // SafeConfig union type
 export type SafeConfigPrediction = {
-  provider: MinimalEIP1193Provider;
+  provider: MinimalEIP1193Provider | string;
   signer: string | undefined;
   predictedSafe: {
     safeAccountConfig: { owners: `0x${string}`[]; threshold: number };
