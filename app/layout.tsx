@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./provider/providers";
 import NavBar from "./components/NavBar";
@@ -7,18 +6,6 @@ import LoadingOverlay from "./components/LoadingOverlay";
 import { headers } from "next/headers";
 import { cookieToInitialState } from "wagmi";
 import { config } from "./config";
-
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
-
-const robotoMono = Roboto_Mono({
-  variable: "--font-roboto-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
 
 export const metadata: Metadata = {
   title: "MSIG UI",
@@ -36,9 +23,7 @@ export default async function RootLayout({
   );
   return (
     <html lang="en" className="min-h-screen">
-      <body
-        className={`min-h-screen ${roboto.variable} ${robotoMono.variable} bg-base-300 antialiased`}
-      >
+      <body className={`bg-base-300 min-h-screen antialiased`}>
         <Providers initialState={initialState}>
           <LoadingOverlay />
           <NavBar />

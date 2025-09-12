@@ -5,9 +5,9 @@ import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import { useAccount } from "wagmi";
 import { useEffect, useState } from "react";
-import { useSafeContext } from "@/app/provider/SafeProvider";
 import { useRouter } from "next/navigation";
 import useSafe from "@/app/hooks/useSafe";
+import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 
 interface SafeInfoClientProps {
   safeAddress: `0x${string}`;
@@ -16,7 +16,7 @@ interface SafeInfoClientProps {
 export default function SafeInfoClient({ safeAddress }: SafeInfoClientProps) {
   const router = useRouter();
   const { address: signer, chain } = useAccount();
-  const { isConnecting } = useSafeContext();
+  const { isConnecting } = useSafeWalletContext();
   const {
     safeInfo,
     isDeployed,

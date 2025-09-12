@@ -7,7 +7,12 @@ import {
   createPredictionConfig,
   createConnectionConfig,
 } from "../utils/helpers";
-import { SafeDeployStep, SafeConnectStep } from "../utils/types";
+import {
+  SafeDeployStep,
+  SafeConnectStep,
+  PendingSafeStatus,
+  PayMethod,
+} from "../utils/types";
 import { waitForTransactionReceipt } from "viem/actions";
 import { zeroAddress } from "viem";
 import { useAccount } from "wagmi";
@@ -24,57 +29,35 @@ export default function useNewSafe() {
     async (
       owners: `0x${string}`[],
       threshold: number,
-      saltNonce?: string,
-      chainId?: string | number,
-    ): Promise<`0x${string}`> => {
+      chainId: number,
+      saltNonce: string,
+    ): Promise<{ address: `0x${string}`; isDeployed: boolean }> => {
       let kit: Safe | null = null;
-      const resolvedChainId = chainId ?? chain?.id;
-      const provider = await getMinimalEIP1193Provider(
-        connector,
-        Number(resolvedChainId),
-      );
+      const provider = await getMinimalEIP1193Provider(connector, chainId);
       if (!provider) {
-        return zeroAddress;
+        return { address: zeroAddress, isDeployed: false };
       }
       try {
         const config: SafeConfig = createPredictionConfig(
           provider,
           signer,
-          Number(resolvedChainId),
+          chainId,
           owners,
           threshold,
           saltNonce,
         );
         kit = await Safe.init(config);
-        // Optionally, add to undeployedSafes
         if (kit) {
           const safeAddress = await kit.getAddress();
-          addSafe(
-            String(resolvedChainId),
-            safeAddress,
-            {
-              props: {
-                factoryAddress: "",
-                masterCopy: "",
-                safeAccountConfig: {
-                  owners,
-                  threshold,
-                },
-                saltNonce: saltNonce || "",
-                safeVersion: "",
-              },
-              status: { status: "predicted", type: "undeployed" },
-            },
-            false,
-          );
-          return safeAddress as `0x${string}`;
+          const isDeployed = await kit.isSafeDeployed();
+          return { address: safeAddress as `0x${string}`, isDeployed };
         }
       } catch {
-        return zeroAddress;
+        return { address: zeroAddress, isDeployed: false };
       }
-      return zeroAddress;
+      return { address: zeroAddress, isDeployed: false };
     },
-    [connector, signer, chain, addSafe],
+    [connector, signer],
   );
 
   const deployNewSafe = useCallback(
@@ -94,6 +77,7 @@ export default function useNewSafe() {
         const provider = await getMinimalEIP1193Provider(connector, chain?.id);
         if (!provider) {
           steps[0].status = "error";
+          steps[0].error = "No provider found";
           return steps;
         }
         const config: SafeConfig = createPredictionConfig(
@@ -111,8 +95,9 @@ export default function useNewSafe() {
           kitClient = await kit.getSafeProvider().getExternalSigner();
           steps[0].status = "success";
           steps[1].status = "running";
-        } catch {
+        } catch (err) {
           steps[0].status = "error";
+          steps[0].error = err instanceof Error ? err.message : String(err);
           return steps;
         }
         try {
@@ -123,19 +108,23 @@ export default function useNewSafe() {
             chain: chain,
           });
           steps[1].status = "success";
+          steps[1].txHash = txHash;
           steps[2].status = "running";
-        } catch {
+        } catch (err) {
           steps[1].status = "error";
+          steps[1].error = err instanceof Error ? err.message : String(err);
           return steps;
         }
         try {
           if (txHash) {
             await waitForTransactionReceipt(kitClient!, { hash: txHash });
             steps[2].status = "success";
+            steps[2].txHash = txHash;
             steps[3].status = "running";
           }
-        } catch {
+        } catch (err) {
           steps[2].status = "error";
+          steps[2].error = err instanceof Error ? err.message : String(err);
           return steps;
         }
         try {
@@ -144,31 +133,50 @@ export default function useNewSafe() {
           const isDeployed = await newKit.isSafeDeployed();
           if (!isDeployed) throw new Error("Safe deployment not detected");
           steps[3].status = "success";
-          // Add to addedSafes
-          addSafe(
-            String(chain?.id ?? 0),
-            safeAddress,
-            {
-              props: {
-                factoryAddress: "",
-                masterCopy: "",
-                safeAccountConfig: {
-                  owners,
-                  threshold,
-                },
-                saltNonce: saltNonce || "",
-                safeVersion: "",
+          steps[3].txHash = txHash;
+          // Add to addedSafes if deployed, else to undeployedSafes
+          if (isDeployed) {
+            addSafe(
+              String(chain?.id ?? 0),
+              safeAddress,
+              {
+                owners,
+                threshold,
               },
-              status: { status: "deployed", type: "deployed" },
-            },
-            true,
-          );
-        } catch {
+              true,
+            );
+          } else {
+            addSafe(
+              String(chain?.id ?? 0),
+              safeAddress,
+              {
+                props: {
+                  factoryAddress: "",
+                  masterCopy: "",
+                  safeAccountConfig: {
+                    owners,
+                    threshold,
+                  },
+                  saltNonce: saltNonce || "",
+                  safeVersion: "",
+                },
+                status: {
+                  status: PendingSafeStatus.AWAITING_EXECUTION,
+                  type: PayMethod.PayLater,
+                },
+              },
+              true,
+            );
+          }
+        } catch (err) {
           steps[3].status = "error";
+          steps[3].error = err instanceof Error ? err.message : String(err);
+          steps[3].txHash = txHash;
           return steps;
         }
-      } catch {
+      } catch (err) {
         steps[0].status = "error";
+        steps[0].error = err instanceof Error ? err.message : String(err);
       }
       return steps;
     },
@@ -223,17 +231,8 @@ export default function useNewSafe() {
             String(resolvedChainId),
             safeAddress,
             {
-              props: {
-                factoryAddress: "",
-                masterCopy: "",
-                safeAccountConfig: {
-                  owners: [],
-                  threshold: 0,
-                },
-                saltNonce: "",
-                safeVersion: "",
-              },
-              status: { status: "connected", type: "deployed" },
+              owners: [],
+              threshold: 0,
             },
             true,
           );
@@ -249,5 +248,9 @@ export default function useNewSafe() {
     [connector, signer, chain, addSafe, safeWalletData],
   );
 
-  return { predictNewSafeAddress, deployNewSafe, connectNewSafe };
+  return {
+    predictNewSafeAddress,
+    deployNewSafe,
+    connectNewSafe,
+  };
 }

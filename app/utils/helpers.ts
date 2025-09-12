@@ -6,7 +6,6 @@ import {
   SafeConfigConnection,
   SafeConfigPrediction,
 } from "./types";
-import { anvil } from "viem/chains";
 
 /**
  * Get a minimal EIP-1193 provider from a wagmi Connector.
@@ -53,9 +52,9 @@ export function createPredictionConfig(
     signer,
     predictedSafe: {
       safeAccountConfig: { owners, threshold },
-      safeDeploymentConfig: saltNonce ? { saltNonce } : undefined,
+      safeDeploymentConfig: saltNonce?.toString ? { saltNonce } : undefined,
     },
-    contractNetworks: chainId === anvil.id ? localContractNetworks : undefined,
+    contractNetworks: localContractNetworks,
   };
 }
 
@@ -70,6 +69,6 @@ export function createConnectionConfig(
     provider,
     signer,
     safeAddress,
-    contractNetworks: chainId === anvil.id ? localContractNetworks : undefined,
+    contractNetworks: localContractNetworks,
   };
 }

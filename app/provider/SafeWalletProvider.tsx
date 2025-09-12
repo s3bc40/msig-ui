@@ -11,7 +11,7 @@
  * For more details, see: https://react.dev/reference/react/useCallback
  */
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { SafeWalletData, SafeConfigData } from "../utils/types";
+import { SafeWalletData, UndeployedSafe } from "../utils/types";
 
 // -- Interfaces and Context --
 interface SafeWalletContextType {
@@ -20,7 +20,7 @@ interface SafeWalletContextType {
   addSafe: (
     chainId: string,
     safeAddress: string,
-    safeConfig: SafeConfigData,
+    safeConfig: UndeployedSafe | { owners: string[]; threshold: number },
     deployed?: boolean,
   ) => void;
   removeSafe: (
@@ -31,7 +31,7 @@ interface SafeWalletContextType {
   updateSafe: (
     chainId: string,
     safeAddress: string,
-    update: Partial<SafeConfigData>,
+    update: Partial<UndeployedSafe>,
     deployed?: boolean,
   ) => void;
   importSafeWalletData: (data: SafeWalletData) => void;
@@ -90,20 +90,37 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
   const addSafe = (
     chainId: string,
     safeAddress: string,
-    safeConfig: SafeConfigData,
+    safeConfig: UndeployedSafe | { owners: string[]; threshold: number },
     deployed = false,
   ) => {
     setSafeWalletData((prev) => {
       const data = { ...prev.data };
       if (deployed) {
         if (!data.addedSafes[chainId]) data.addedSafes[chainId] = {};
-        data.addedSafes[chainId][safeAddress] = {
-          owners: safeConfig.props.safeAccountConfig.owners,
-          threshold: safeConfig.props.safeAccountConfig.threshold,
-        };
+        // Only accept { owners, threshold } for deployed
+        if (
+          typeof safeConfig === "object" &&
+          "owners" in safeConfig &&
+          "threshold" in safeConfig &&
+          !("props" in safeConfig)
+        ) {
+          data.addedSafes[chainId][safeAddress] = {
+            owners: safeConfig.owners,
+            threshold: safeConfig.threshold,
+          };
+        } else {
+          // If passed UndeployedSafe by mistake, extract owners/threshold from props
+          const undeployed = safeConfig as UndeployedSafe;
+          data.addedSafes[chainId][safeAddress] = {
+            owners: undeployed.props.safeAccountConfig.owners,
+            threshold: undeployed.props.safeAccountConfig.threshold,
+          };
+        }
       } else {
         if (!data.undeployedSafes[chainId]) data.undeployedSafes[chainId] = {};
-        data.undeployedSafes[chainId][safeAddress] = safeConfig;
+        // Only accept UndeployedSafe for undeployed
+        data.undeployedSafes[chainId][safeAddress] =
+          safeConfig as UndeployedSafe;
       }
       return { ...prev, data };
     });
@@ -132,7 +149,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
   const updateSafe = (
     chainId: string,
     safeAddress: string,
-    update: Partial<SafeConfigData>,
+    update: Partial<UndeployedSafe>,
     deployed = false,
   ) => {
     setSafeWalletData((prev) => {

@@ -2,32 +2,34 @@ import { type Chain } from "viem";
 import AppAddress from "@/app/components/AppAddress";
 
 interface SafeDetailsProps {
-  selectedNetwork: Chain | undefined;
+  selectedNetworks: Chain[] | undefined;
   signers: string[];
   threshold: number;
 }
 
 export default function SafeDetails({
-  selectedNetwork,
+  selectedNetworks,
   signers,
   threshold,
 }: SafeDetailsProps) {
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <p className="mb-2 text-lg font-medium">Selected Network:</p>
+        <p className="mb-2 text-lg font-medium">Selected Networks:</p>
         <div className="flex flex-wrap gap-2">
-          {!selectedNetwork ? (
+          {!selectedNetworks || selectedNetworks.length === 0 ? (
             <span className="badge badge-outline text-base-content">
               None selected
             </span>
           ) : (
-            <span
-              key={selectedNetwork.id}
-              className="badge badge-secondary badge-outline"
-            >
-              {selectedNetwork.name}
-            </span>
+            selectedNetworks.map((network) => (
+              <span
+                key={network.id}
+                className="badge badge-accent badge-outline"
+              >
+                {network.name}
+              </span>
+            ))
           )}
         </div>
       </div>

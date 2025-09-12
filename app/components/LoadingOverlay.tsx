@@ -1,18 +1,11 @@
 "use client";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useTransition } from "react";
 
 export default function LoadingOverlay() {
-  const pathname = usePathname();
-  const [loading, setLoading] = useState(false);
+  // This will be true if a transition is pending (e.g., navigation)
+  const isPending = useTransition()[0];
 
-  useEffect(() => {
-    setLoading(true);
-    const timeout = setTimeout(() => setLoading(false), 500); // Simulate loading for UX
-    return () => clearTimeout(timeout);
-  }, [pathname]);
-
-  if (!loading) return null;
+  if (!isPending) return null;
 
   return (
     <div className="bg-neutral/80 pointer-events-none fixed inset-0 z-50 flex items-center justify-center">

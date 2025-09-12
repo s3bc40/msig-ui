@@ -1,13 +1,13 @@
 import { useAccount } from "wagmi";
-import { useSafeContext } from "../provider/SafeProvider";
 import Safe, { SafeConfig } from "@safe-global/protocol-kit";
 import { useCallback, useEffect, useState } from "react";
 import { getMinimalEIP1193Provider } from "../utils/helpers";
+import { useSafeWalletContext } from "../provider/SafeWalletProvider";
 
 export default function useSafe(safeAddress: `0x${string}`) {
   const { address: signer, chain, connector } = useAccount();
   const { protocolKits, setProtocolKits, setLastSafe, isConnecting } =
-    useSafeContext();
+    useSafeWalletContext();
 
   const [safeInfo, setSafeInfo] = useState<{
     owners: `0x${string}`[];

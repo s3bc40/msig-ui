@@ -89,11 +89,6 @@ export default function ConnectSafeClient() {
     setModalOpen(false);
   }
 
-  function handleGoToSafe() {
-    setRedirecting(true);
-    router.push(`safe/${safeAddress}`);
-  }
-
   return (
     <AppSection>
       <div>
@@ -167,9 +162,7 @@ export default function ConnectSafeClient() {
         }
         selectedNetwork={chains.find((c) => c.id.toString() === selectedChain)}
         onClose={handleCloseModal}
-        onGoToSafe={handleGoToSafe}
-        showGoToSafe={isDeployed === true && !connectError}
-        goToSafeLabel={redirecting ? "Redirecting..." : "Go to Safe"}
+        showGoToAccounts={isDeployed === true && !connectError}
         closeLabel="Close"
       />
     </AppSection>

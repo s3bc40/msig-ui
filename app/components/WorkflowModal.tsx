@@ -1,6 +1,7 @@
 import React from "react";
 import AppAddress from "@/app/components/AppAddress";
 import { Chain } from "viem";
+import Link from "next/link";
 
 export interface WorkflowModalProps {
   open: boolean;
@@ -10,9 +11,7 @@ export interface WorkflowModalProps {
   error?: string | null;
   selectedNetwork?: Chain;
   onClose: () => void;
-  onGoToSafe?: () => void;
-  showGoToSafe?: boolean;
-  goToSafeLabel?: string;
+  showGoToAccounts?: boolean;
   closeLabel?: string;
 }
 
@@ -24,9 +23,7 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
   error,
   selectedNetwork,
   onClose,
-  onGoToSafe,
-  showGoToSafe = false,
-  goToSafeLabel = "Go to Safe",
+  showGoToAccounts = false,
   closeLabel = "Close",
 }) => {
   if (!open) return null;
@@ -80,7 +77,7 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
           )}
         </div>
         <div className="flex justify-center gap-4">
-          {error && (
+          {error ? (
             <button
               type="button"
               className="btn btn-secondary"
@@ -88,15 +85,11 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
             >
               {closeLabel}
             </button>
-          )}
-          {showGoToSafe && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={onGoToSafe}
-            >
-              {goToSafeLabel}
-            </button>
+          ) : null}
+          {showGoToAccounts && !error && (
+            <Link type="button" className="btn btn-primary" href="/accounts">
+              Go to Accounts
+            </Link>
           )}
         </div>
       </div>

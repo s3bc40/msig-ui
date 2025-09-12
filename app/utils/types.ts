@@ -1,5 +1,4 @@
 // Types for SafeProvider helpers
-
 import { localContractNetworks } from "./localContractNetworks";
 
 type SafeStep = {
@@ -42,6 +41,52 @@ export type SafeConfigConnection = {
 
 export type SafeConfig = SafeConfigPrediction | SafeConfigConnection;
 
+// --- SafeWallet Counterfactual Types ---
+// safe-global/safe-wallet-monorepo/packages/store/src/gateway/types.ts
+export enum PayMethod {
+  PayNow = "PayNow",
+  PayLater = "PayLater",
+}
+
+export enum PendingSafeStatus {
+  AWAITING_EXECUTION = "AWAITING_EXECUTION",
+  PROCESSING = "PROCESSING",
+  RELAYING = "RELAYING",
+}
+
+export type UndeployedSafeStatus = {
+  status: PendingSafeStatus;
+  type: PayMethod;
+  txHash?: string;
+  taskId?: string;
+  startBlock?: number;
+  submittedAt?: number;
+  signerAddress?: string;
+  signerNonce?: number | null;
+};
+
+export type ReplayedSafeProps = {
+  factoryAddress: string;
+  masterCopy: string;
+  safeAccountConfig: {
+    threshold: number;
+    owners: string[];
+    fallbackHandler?: string;
+    to?: string;
+    data?: string;
+    paymentToken?: string;
+    payment?: number;
+    paymentReceiver?: string;
+  };
+  saltNonce: string;
+  safeVersion: string;
+};
+
+export type UndeployedSafe = {
+  status: UndeployedSafeStatus;
+  props: ReplayedSafeProps;
+};
+
 // SafeWalletData structure for localStorage
 export interface SafeWalletData {
   version: string;
@@ -61,32 +106,11 @@ export interface SafeWalletData {
     };
     undeployedSafes: {
       [chainId: string]: {
-        [safeAddress: string]: SafeConfigData;
+        [safeAddress: string]: UndeployedSafe;
       };
     };
     visitedSafes?: {
       [chainId: string]: { [safeAddress: string]: { lastVisited: number } };
     };
   };
-}
-
-export interface SafeConfigData {
-  props: {
-    factoryAddress: string;
-    masterCopy: string;
-    safeAccountConfig: {
-      owners: string[];
-      threshold: number;
-      fallbackHandler?: string;
-      to?: string;
-      data?: string;
-      paymentReceiver?: string;
-      safeVersion?: string;
-    };
-    saltNonce: string;
-    safeVersion: string;
-  };
-  status: { status: string; type: string };
-  startBlock?: number;
-  submittedAt?: number;
 }
