@@ -1,5 +1,5 @@
 // Types for SafeProvider helpers
-import { localContractNetworks } from "./localContractNetworks";
+import { ContractNetworks } from "./contractNetworks";
 
 type SafeStep = {
   status: "idle" | "running" | "success" | "error";
@@ -29,14 +29,14 @@ export type SafeConfigPrediction = {
     safeAccountConfig: { owners: `0x${string}`[]; threshold: number };
     safeDeploymentConfig?: { saltNonce: string };
   };
-  contractNetworks?: typeof localContractNetworks;
+  contractNetworks?: ContractNetworks;
 };
 
 export type SafeConfigConnection = {
   provider: MinimalEIP1193Provider;
   signer: string | undefined;
   safeAddress: `0x${string}`;
-  contractNetworks?: typeof localContractNetworks;
+  contractNetworks?: ContractNetworks;
 };
 
 export type SafeConfig = SafeConfigPrediction | SafeConfigConnection;

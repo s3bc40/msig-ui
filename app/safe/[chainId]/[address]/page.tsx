@@ -1,4 +1,4 @@
-import SafeInfoClient from "./SafeInfoClient";
+import SafeDashboardClient from "./SafeDashboardClient";
 
 export default async function SafeInfoPage({
   params,
@@ -7,5 +7,5 @@ export default async function SafeInfoPage({
 }) {
   const { address: safeAddress } = await params;
 
-  return <SafeInfoClient safeAddress={safeAddress} />;
+  return <SafeDashboardClient safeAddress={safeAddress} />;
 }

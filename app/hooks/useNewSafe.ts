@@ -19,7 +19,7 @@ export default function useNewSafe() {
   const { switchChain } = useSwitchChain();
 
   // Get SafeWalletProvider context
-  const { addSafe } = useSafeWalletContext();
+  const { addSafe, contractNetworks } = useSafeWalletContext();
 
   const predictNewSafeAddress = useCallback(
     async (
@@ -36,9 +36,9 @@ export default function useNewSafe() {
           owners,
           threshold,
           saltNonce,
+          contractNetworks,
         );
         // @FIXME issues on config diff between chains (multi deploy)
-        console.log("Prediction config:", config);
         kit = await Safe.init(config);
         if (kit) {
           const safeAddress = await kit.getAddress();
@@ -50,7 +50,7 @@ export default function useNewSafe() {
       }
       return { address: zeroAddress, isDeployed: false };
     },
-    [connector, signer, switchChain],
+    [signer, contractNetworks],
   );
 
   const deployNewSafe = useCallback(
@@ -84,6 +84,7 @@ export default function useNewSafe() {
           owners,
           threshold,
           saltNonce,
+          contractNetworks,
         );
         const kit = await Safe.init(config);
         let deploymentTx, kitClient, txHash;
@@ -150,19 +151,24 @@ export default function useNewSafe() {
               true,
             );
           } else {
+            const chainContracts = contractNetworks
+              ? contractNetworks[String(chain.id)]
+              : {};
             addSafe(
               String(chain.id),
               safeAddress,
               {
                 props: {
-                  factoryAddress: "",
-                  masterCopy: "",
+                  factoryAddress: chainContracts?.safeProxyFactoryAddress || "",
+                  masterCopy: chainContracts?.safeSingletonAddress || "",
                   safeAccountConfig: {
                     owners,
                     threshold,
+                    fallbackHandler:
+                      chainContracts?.fallbackHandlerAddress || "",
                   },
                   saltNonce: saltNonce || "",
-                  safeVersion: "",
+                  safeVersion: "1.4.1", // @TODO dynamic later
                 },
                 status: {
                   status: PendingSafeStatus.AWAITING_EXECUTION,
@@ -186,7 +192,7 @@ export default function useNewSafe() {
       }
       return steps;
     },
-    [connector, signer, addSafe, switchChain],
+    [connector, signer, addSafe, switchChain, contractNetworks],
   );
 
   const connectNewSafe = useCallback(
@@ -207,7 +213,12 @@ export default function useNewSafe() {
             error: "Could not get EIP-1193 provider for selected network.",
           };
         }
-        const config = createConnectionConfig(provider, signer, safeAddress);
+        const config = createConnectionConfig(
+          provider,
+          signer,
+          safeAddress,
+          contractNetworks,
+        );
         // Initialize Safe SDK
         let kit;
         try {
@@ -253,7 +264,7 @@ export default function useNewSafe() {
         };
       }
     },
-    [connector, signer, switchChain],
+    [connector, signer, switchChain, contractNetworks],
   );
 
   return {

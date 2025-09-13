@@ -14,6 +14,9 @@ importers:
       '@safe-global/protocol-kit':
         specifier: ^6.1.0
         version: 6.1.0(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4)
+      '@safe-global/safe-deployments':
+        specifier: ^1.37.44
+        version: 1.37.44
       '@tanstack/react-query':
         specifier: ^5.85.5
         version: 5.85.5(react@19.1.0)
@@ -609,8 +612,8 @@ packages:
   '@safe-global/safe-apps-sdk@9.1.0':
     resolution: {integrity: sha512-N5p/ulfnnA2Pi2M3YeWjULeWbjo7ei22JwU/IXnhoHzKq3pYCN6ynL9mJBOlvDVv892EgLPCWCOwQk/uBT2v0Q==}
 
-  '@safe-global/safe-deployments@1.37.42':
-    resolution: {integrity: sha512-hu/GEQhO5lmHsSeVJavtVysdqy16VAumd3pgILN9bTj82ImlHWgkFNYXyeOSbjPvmizdnVVEUzH49yBmoM6oMQ==}
+  '@safe-global/safe-deployments@1.37.44':
+    resolution: {integrity: sha512-fdmWxU7U5FLqfIl2aFFRFKBiOxWVAFYtpbneJIYfeNObvAnFsoQDKN4qym2hCDKTuIrnfX2jv8tqfrIxxMyOpA==}
 
   '@safe-global/safe-gateway-typescript-sdk@3.23.1':
     resolution: {integrity: sha512-6ORQfwtEJYpalCeVO21L4XXGSdbEMfyp2hEv6cP82afKXSwvse6d3sdelgaPWUxHIsFRkWvHDdzh8IyyKHZKxw==}
@@ -4081,7 +4084,7 @@ snapshots:
 
   '@safe-global/protocol-kit@6.1.0(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4)':
     dependencies:
-      '@safe-global/safe-deployments': 1.37.42
+      '@safe-global/safe-deployments': 1.37.44
       '@safe-global/safe-modules-deployments': 2.2.14
       '@safe-global/types-kit': 3.0.0(typescript@5.9.2)(zod@3.22.4)
       abitype: 1.0.9(typescript@5.9.2)(zod@3.22.4)
@@ -4116,7 +4119,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@safe-global/safe-deployments@1.37.42':
+  '@safe-global/safe-deployments@1.37.44':
     dependencies:
       semver: 7.7.2
 

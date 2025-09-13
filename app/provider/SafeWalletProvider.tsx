@@ -11,12 +11,16 @@
  * For more details, see: https://react.dev/reference/react/useCallback
  */
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { SafeWalletData, UndeployedSafe } from "../utils/types";
+import type { SafeWalletData, UndeployedSafe } from "../utils/types";
+import { buildContractNetworks } from "../utils/contractNetworks";
+import type { ContractNetworks } from "../utils/contractNetworks";
+import { useChains } from "wagmi";
 
 // -- Interfaces and Context --
-interface SafeWalletContextType {
+export interface SafeWalletContextType {
   safeWalletData: SafeWalletData;
   setSafeWalletData: React.Dispatch<React.SetStateAction<SafeWalletData>>;
+  contractNetworks: ContractNetworks | undefined;
   addSafe: (
     chainId: string,
     safeAddress: string,
@@ -48,7 +52,11 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   // Wagmi hooks (if needed for actions)
-  // const { address: signer, connector, chain } = useAccount();
+  const chains = useChains();
+
+  const [contractNetworks, setContractNetworks] = useState<
+    ContractNetworks | undefined
+  >();
 
   // Initialize SafeWalletData from localStorage or default
   const defaultSafeWalletData = React.useMemo<SafeWalletData>(
@@ -68,7 +76,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     defaultSafeWalletData,
   );
 
-  // Load SafeWalletData from localStorage on mount
+  // Load SafeWalletData from localStorage and build contractNetworks on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("msigWalletData");
@@ -79,8 +87,13 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
           setSafeWalletData(defaultSafeWalletData);
         }
       }
+      // Build contractNetworks once chains are available
+      const chainIds = chains.map((c) => c.id);
+      buildContractNetworks(chainIds)
+        .then(setContractNetworks)
+        .catch(() => setContractNetworks(undefined));
     }
-  }, [defaultSafeWalletData]);
+  }, [defaultSafeWalletData, chains]);
 
   // Persist SafeWalletData to localStorage on change
   useEffect(() => {
@@ -202,6 +215,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         safeWalletData,
         setSafeWalletData,
+        contractNetworks,
         addSafe,
         removeSafe,
         updateSafe,

@@ -117,7 +117,7 @@ export default function AccountsPage() {
                         <Link
                           className="btn btn-square btn-ghost"
                           title="Go to Safe"
-                          href={`/safe/${safeAddress}?chainId=${chainId}`}
+                          href={`/safe/${chainId}/${safeAddress}`}
                         >
                           <svg
                             className="size-[1.2em]"

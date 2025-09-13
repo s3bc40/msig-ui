@@ -1,11 +1,11 @@
 // Helper functions for SafeProvider
 import { Connector } from "wagmi";
-import { localContractNetworks } from "./localContractNetworks";
 import {
   MinimalEIP1193Provider,
   SafeConfigConnection,
   SafeConfigPrediction,
 } from "./types";
+import { ContractNetworks } from "./contractNetworks";
 
 /**
  * Get a minimal EIP-1193 provider from a wagmi Connector.
@@ -41,9 +41,10 @@ export async function getMinimalEIP1193Provider(
 export function createPredictionConfig(
   provider: MinimalEIP1193Provider | string,
   signer: string | undefined,
-  owners: `0x${string}`[],
+  owners: Array<`0x${string}`>,
   threshold: number,
   saltNonce?: string,
+  contractNetworks?: ContractNetworks,
 ): SafeConfigPrediction {
   return {
     provider,
@@ -52,7 +53,7 @@ export function createPredictionConfig(
       safeAccountConfig: { owners, threshold },
       safeDeploymentConfig: saltNonce?.toString ? { saltNonce } : undefined,
     },
-    contractNetworks: localContractNetworks,
+    contractNetworks: contractNetworks,
   };
 }
 
@@ -61,11 +62,12 @@ export function createConnectionConfig(
   provider: MinimalEIP1193Provider,
   signer: string | undefined,
   safeAddress: `0x${string}`,
+  contractNetworks?: ContractNetworks,
 ): SafeConfigConnection {
   return {
     provider,
     signer,
     safeAddress,
-    contractNetworks: localContractNetworks,
+    contractNetworks: contractNetworks,
   };
 }
