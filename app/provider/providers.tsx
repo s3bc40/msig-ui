@@ -14,6 +14,7 @@ import {
 import { config } from "../config";
 import { SafeWalletProvider } from "./SafeWalletProvider";
 import type { State } from "wagmi";
+import { SafeKitProvider } from "./SafeKitProvider";
 
 // From https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr
 function makeQueryClient() {
@@ -68,7 +69,9 @@ export default function Providers({
             }),
           }}
         >
-          <SafeWalletProvider>{children}</SafeWalletProvider>
+          <SafeWalletProvider>
+            <SafeKitProvider>{children}</SafeKitProvider>
+          </SafeWalletProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

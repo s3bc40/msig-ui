@@ -5,11 +5,12 @@ import Link from "next/link";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
-import { useChains } from "wagmi";
+import { useChains, useSwitchChain } from "wagmi";
 
 export default function AccountsPage() {
   const wagmiChains = useChains();
-  const { safeWalletData, removeSafe } = useSafeWalletContext();
+  const { switchChain } = useSwitchChain();
+  const { safeWalletData } = useSafeWalletContext();
   const [showDeployed, setShowDeployed] = useState(true);
 
   // Group safes by safeAddress for accordion display
@@ -117,7 +118,10 @@ export default function AccountsPage() {
                         <Link
                           className="btn btn-square btn-ghost"
                           title="Go to Safe"
-                          href={`/safe/${chainId}/${safeAddress}`}
+                          href={`/safe/${safeAddress}`}
+                          onClick={() =>
+                            switchChain({ chainId: parseInt(chainId) })
+                          }
                         >
                           <svg
                             className="size-[1.2em]"

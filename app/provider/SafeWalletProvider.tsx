@@ -32,12 +32,6 @@ export interface SafeWalletContextType {
     safeAddress: string,
     deployed?: boolean,
   ) => void;
-  updateSafe: (
-    chainId: string,
-    safeAddress: string,
-    update: Partial<UndeployedSafe>,
-    deployed?: boolean,
-  ) => void;
   importSafeWalletData: (data: SafeWalletData) => void;
   exportSafeWalletData: () => string;
 }
@@ -159,49 +153,6 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const updateSafe = (
-    chainId: string,
-    safeAddress: string,
-    update: Partial<UndeployedSafe>,
-    deployed = false,
-  ) => {
-    setSafeWalletData((prev) => {
-      const data = { ...prev.data };
-      if (deployed) {
-        if (data.addedSafes[chainId] && data.addedSafes[chainId][safeAddress]) {
-          if (update.props?.safeAccountConfig.owners) {
-            data.addedSafes[chainId][safeAddress].owners =
-              update.props.safeAccountConfig.owners;
-          }
-          if (update.props?.safeAccountConfig.threshold) {
-            data.addedSafes[chainId][safeAddress].threshold =
-              update.props.safeAccountConfig.threshold;
-          }
-        }
-      } else {
-        if (
-          data.undeployedSafes[chainId] &&
-          data.undeployedSafes[chainId][safeAddress]
-        ) {
-          data.undeployedSafes[chainId][safeAddress] = {
-            ...data.undeployedSafes[chainId][safeAddress],
-            ...update,
-            props: {
-              ...data.undeployedSafes[chainId][safeAddress].props,
-              ...update.props,
-              safeAccountConfig: {
-                ...data.undeployedSafes[chainId][safeAddress].props
-                  .safeAccountConfig,
-                ...update.props?.safeAccountConfig,
-              },
-            },
-          };
-        }
-      }
-      return { ...prev, data };
-    });
-  };
-
   const importSafeWalletData = (data: SafeWalletData) => {
     setSafeWalletData(data);
   };
@@ -218,7 +169,6 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
         contractNetworks,
         addSafe,
         removeSafe,
-        updateSafe,
         importSafeWalletData,
         exportSafeWalletData,
       }}

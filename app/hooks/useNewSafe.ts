@@ -38,7 +38,6 @@ export default function useNewSafe() {
           saltNonce,
           contractNetworks,
         );
-        // @FIXME issues on config diff between chains (multi deploy)
         kit = await Safe.init(config);
         if (kit) {
           const safeAddress = await kit.getAddress();

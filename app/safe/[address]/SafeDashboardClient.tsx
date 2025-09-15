@@ -4,9 +4,10 @@ import AppAddress from "@/app/components/AppAddress";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import useSafe from "@/app/hooks/useSafe";
-import React, { useEffect } from "react";
-import { useParams } from "next/navigation";
+import React from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useAccount, useSwitchChain } from "wagmi";
+import { formatEther } from "viem";
 
 export default function SafeDashboardClient({
   safeAddress,
@@ -25,16 +26,9 @@ export default function SafeDashboardClient({
   } = useSafe(safeAddress);
 
   const params = useParams();
-  const { chain } = useAccount();
+  const { chain, isConnected } = useAccount();
   const { switchChain } = useSwitchChain();
-
-  // Sync chain with URL param on mount
-  useEffect(() => {
-    const urlChainId = params?.chainId ? Number(params.chainId) : undefined;
-    if (urlChainId && chain && chain.id !== urlChainId) {
-      switchChain?.({ chainId: urlChainId });
-    }
-  }, [params?.chainId, chain, switchChain]);
+  const router = useRouter();
 
   // Example: Dummy tx data for demonstration
   const dummyTx = {
@@ -104,8 +98,6 @@ export default function SafeDashboardClient({
     );
   }
 
-  // Only show redirect if shouldRedirect is true and not autoConnected
-
   // Dashboard layout with DaisyUI stat row, cards, and divider
   return (
     <AppSection>
@@ -113,8 +105,11 @@ export default function SafeDashboardClient({
       <div className="stats stats-horizontal mb-6">
         <div className="stat">
           <div className="stat-title">Balance</div>
-          <div className="stat-value text-primary">
-            {safeInfo?.balance?.toString() ?? "-"}
+          <div className="stat-value text-primary flex gap-1">
+            <p>
+              {safeInfo?.balance ? formatEther(safeInfo.balance) : "-"}{" "}
+              {chain?.nativeCurrency.symbol ?? ""}
+            </p>
           </div>
         </div>
         <div className="stat">
@@ -129,6 +124,10 @@ export default function SafeDashboardClient({
           <div className="stat-title">Version</div>
           <div className="stat-value">{safeInfo?.version ?? "-"}</div>
         </div>
+        <div className="stat">
+          <div className="stat-title">Nonce</div>
+          <div className="stat-value">{safeInfo?.nonce ?? "-"}</div>
+        </div>
       </div>
       <div className="divider">Safe Details</div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -136,6 +135,10 @@ export default function SafeDashboardClient({
           <div className="mb-2">
             <span className="font-semibold">Address:</span>
             <AppAddress address={safeAddress} className="ml-2" />
+          </div>
+          <div className="mb-2">
+            <span className="font-semibold">Nonce:</span>
+            <span className="ml-2">{safeInfo?.nonce ?? "-"}</span>
           </div>
           {/* Chain selector moved to top right */}
           <div className="mb-2">
