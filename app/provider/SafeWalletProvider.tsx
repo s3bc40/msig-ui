@@ -55,7 +55,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
   // Initialize SafeWalletData from localStorage or default
   const defaultSafeWalletData = React.useMemo<SafeWalletData>(
     () => ({
-      version: "3.0",
+      version: "3.0", // current version?
       data: {
         addressBook: {},
         addedSafes: {},
