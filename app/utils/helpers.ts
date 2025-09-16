@@ -6,6 +6,7 @@ import {
   SafeConfigPrediction,
 } from "./types";
 import { ContractNetworks } from "./contractNetworks";
+import { ADJECTIVES, NOUNS } from "./constants";
 
 /**
  * Get a minimal EIP-1193 provider from a wagmi Connector.
@@ -70,4 +71,27 @@ export function createConnectionConfig(
     safeAddress,
     contractNetworks: contractNetworks,
   };
+}
+
+export function getRandomSafeName() {
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+  return `${adj} ${noun}`;
+}
+
+/**
+ * Sanitizes user input to prevent XSS attacks by removing HTML tags and dangerous characters.
+ *
+ * - Removes anything matching <...> (HTML tags) using /<[^>]*>/g
+ * - Removes characters: > < ' " ` using /[><'"`]/g
+ * - Trims whitespace and limits length to 64 characters
+ *
+ * @param name - The user input string to sanitize
+ * @returns A safe string with tags and dangerous characters removed
+ */
+export function sanitizeUserInput(name: string): string {
+  // Remove HTML tags, quotes, and angle brackets in one step
+  const sanitized = name.replace(/<[^>]*>/g, "").replace(/[><'"`]/g, "");
+  // Optionally trim and limit length
+  return sanitized.trim().slice(0, 64);
 }

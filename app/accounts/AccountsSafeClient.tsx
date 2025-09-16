@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 
-// TODO rework wallet data addressbook main deployed, name to safes
-
 // Helper to summarize SafeWalletData for preview
 import { Modal } from "@/app/components/Modal";
 import Link from "next/link";
@@ -19,39 +17,32 @@ export default function AccountsPage() {
   const { safeWalletData, setSafeWalletData } = useSafeWalletContext();
   const [showDeployed, setShowDeployed] = useState(true);
 
-  // Group safes by safeAddress for accordion display
+  // Group safes by safeAddress for accordion display using addressBook and undeployedSafes
   const getGroupedSafes = (type: "deployed" | "undeployed") => {
     const grouped: Record<
       string,
-      Array<{ chainId: string; owners: string[]; threshold: number }>
+      Array<{ chainId: string; name: string }>
     > = {};
-    if (type === "deployed") {
-      Object.entries(safeWalletData.data.addedSafes).forEach(
-        ([chainId, safesObj]) => {
-          Object.entries(safesObj).forEach(([safeAddress, meta]) => {
-            if (!grouped[safeAddress]) grouped[safeAddress] = [];
-            grouped[safeAddress].push({
-              chainId,
-              owners: meta.owners,
-              threshold: meta.threshold,
-            });
+    const { addressBook, undeployedSafes } = safeWalletData.data;
+    Object.entries(addressBook).forEach(([chainId, safesObj]) => {
+      Object.entries(safesObj).forEach(([safeAddress, name]) => {
+        const isUndeployed =
+          undeployedSafes[chainId] && undeployedSafes[chainId][safeAddress];
+        if (
+          (type === "undeployed" && isUndeployed) ||
+          (type === "deployed" && !isUndeployed)
+        ) {
+          if (isUndeployed) {
+            const config = undeployedSafes[chainId][safeAddress];
+          }
+          if (!grouped[safeAddress]) grouped[safeAddress] = [];
+          grouped[safeAddress].push({
+            chainId,
+            name: String(name),
           });
-        },
-      );
-    } else {
-      Object.entries(safeWalletData.data.undeployedSafes).forEach(
-        ([chainId, safesObj]) => {
-          Object.entries(safesObj).forEach(([safeAddress, config]) => {
-            if (!grouped[safeAddress]) grouped[safeAddress] = [];
-            grouped[safeAddress].push({
-              chainId,
-              owners: config.props.safeAccountConfig.owners,
-              threshold: config.props.safeAccountConfig.threshold,
-            });
-          });
-        },
-      );
-    }
+        }
+      });
+    });
     return grouped;
   };
 
@@ -187,105 +178,46 @@ export default function AccountsPage() {
           {Object.keys(groupedSafes).length === 0 ? (
             <div className="text-center text-gray-400">No Safes found.</div>
           ) : (
-            Object.entries(groupedSafes).map(([safeAddress, chains]) => (
-              <div
-                className="bg-base-100 border-base-300 collapse border"
-                key={safeAddress}
-              >
-                <input type="checkbox" />
-                <div className="collapse-title flex items-center gap-2 font-semibold">
-                  <span className="font-mono text-lg break-all">
-                    {safeAddress}
-                  </span>
-                  <span className="badge badge-outline badge-sm">
-                    {chains.length} chain{chains.length > 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className="collapse-content">
-                  <ul className="list bg-base-100 rounded-box gap-4 shadow-md">
-                    {chains.map(({ chainId, owners, threshold }) => (
-                      <li
-                        className="list-row border-accent items-center gap-4 border-2"
-                        key={chainId}
-                      >
-                        <div className="text-base-content flex size-10 w-48 items-center font-bold">
-                          {wagmiChains.find((c) => c.id.toString() === chainId)
-                            ?.name || chainId}
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="mt-1 text-xs font-semibold uppercase opacity-60">
-                            Threshold: {threshold}/{owners.length}
-                          </div>
-                        </div>
+            Object.entries(groupedSafes).map(([safeAddress, chains]) => {
+              // Use the first chain's name for display, since all have the same name
+              const displayName = chains[0]?.name || safeAddress;
+              return (
+                <div
+                  className="bg-base-100 border-base-300 collapse-arrow collapse border"
+                  key={safeAddress}
+                >
+                  <input type="checkbox" />
+                  <div className="collapse-title flex items-center gap-2 font-semibold">
+                    <span className="text-lg font-bold break-all">
+                      {displayName}
+                    </span>
+                    <span className="font-mono text-xs break-all text-gray-500">
+                      {safeAddress}
+                    </span>
+                  </div>
+                  <div className="collapse-content">
+                    <ul className="list bg-base-100 rounded-box gap-4 shadow-md">
+                      {chains.map(({ chainId }) => (
                         <Link
-                          className="btn btn-square btn-ghost"
-                          title="Go to Safe"
+                          className="list-row border-accent text-base-content hover:bg-base-200 flex w-full items-center gap-4 rounded border-2 p-4 font-bold"
                           href={`/safe/${safeAddress}`}
+                          key={chainId}
                           onClick={() =>
                             switchChain({ chainId: parseInt(chainId) })
                           }
                         >
-                          <svg
-                            className="size-[1.2em]"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                          >
-                            <g
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                              strokeWidth="2"
-                              fill="none"
-                              stroke="currentColor"
-                            >
-                              <path d="M7 17L17 7" />
-                              <path d="M7 7h10v10" />
-                            </g>
-                          </svg>
+                          {wagmiChains.find((c) => c.id.toString() === chainId)
+                            ?.name || chainId}
+                          <span className="ml-2 text-xs text-gray-500">
+                            ({chainId})
+                          </span>
                         </Link>
-                        <button
-                          className="btn btn-square btn-ghost"
-                          title="Copy address"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(safeAddress);
-                          }}
-                        >
-                          <svg
-                            className="size-[1.2em]"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                          >
-                            <g
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                              strokeWidth="2"
-                              fill="none"
-                              stroke="currentColor"
-                            >
-                              <rect
-                                x="9"
-                                y="9"
-                                width="13"
-                                height="13"
-                                rx="2"
-                              ></rect>
-                              <rect
-                                x="3"
-                                y="3"
-                                width="13"
-                                height="13"
-                                rx="2"
-                              ></rect>
-                            </g>
-                          </svg>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </AppCard>

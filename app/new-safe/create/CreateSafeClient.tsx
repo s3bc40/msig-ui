@@ -7,7 +7,7 @@ import AppAddress from "@/app/components/AppAddress";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useChains } from "wagmi";
 import StepSigners from "./components/StepSigners";
-import StepNetworks from "./components/StepNetworks";
+import StepNetworks from "./components/StepNameAndNetworks";
 import SafeDetails from "../components/SafeDetails";
 import Stepper from "./components/Stepper";
 import { WorkflowModal } from "@/app/components/WorkflowModal";
@@ -22,6 +22,7 @@ import {
 } from "@/app/utils/types";
 import { Chain, zeroAddress } from "viem";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
+import { getRandomSafeName } from "@/app/utils/helpers";
 
 export default function CreateSafeClient() {
   const { address: signer, chain } = useAccount();
@@ -40,6 +41,10 @@ export default function CreateSafeClient() {
 
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Safe name state
+  const [safeName, setSafeName] = useState<string>("");
+  const [randomName] = useState(() => getRandomSafeName());
 
   // Multi-chain selection
   const [selectedChains, setSelectedChains] = useState<Chain[]>([]);
@@ -73,23 +78,21 @@ export default function CreateSafeClient() {
   // Threshold state
   const [threshold, setThreshold] = useState<number>(1);
 
-  // Predicted Safe address state
-  const [safePredictedAddress, setSafePredictedAddress] = useState<
-    `0x${string}` | null
-  >(null);
-
   // Salt nonce for Safe creation (number string for SDK compatibility)
   const [saltNonce, setSaltNonce] = useState<number>(0);
 
   // Step content as components (now with StepNetworks)
   const stepContent = [
-    // Step 0: Chain selection
+    // Step 0: Chain selection + Safe name input
     <StepNetworks
       key="chains"
       chains={chains}
       selectedChains={selectedChains}
       setSelectedChains={setSelectedChains}
       onNext={() => setCurrentStep(1)}
+      safeName={safeName}
+      setSafeName={setSafeName}
+      placeholder={randomName}
     />,
     // Step 1: Owners/Threshold
     <StepSigners
@@ -108,7 +111,6 @@ export default function CreateSafeClient() {
 
   // Modal state for deployment progress
   const [modalOpen, setModalOpen] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
 
   // Utility: Predict Safe address across chains, loop saltNonce until all match and not deployed
   const predictConsistentSafeAddressAcrossChains = useCallback(
@@ -193,7 +195,6 @@ export default function CreateSafeClient() {
             ),
           );
           setSaltNonce(Number(foundSaltNonce));
-          setSafePredictedAddress(safeAddress);
         }
       } catch (err: unknown) {
         if (!cancelled) {
@@ -241,6 +242,7 @@ export default function CreateSafeClient() {
         threshold,
         selectedChains[0],
         saltNonce.toString(),
+        safeName.trim() || randomName,
         setDeploySteps,
       );
       setDeploySteps(steps);
@@ -273,31 +275,26 @@ export default function CreateSafeClient() {
 
   async function handleValidateMultiChain() {
     const validSigners = signers.filter(isValidAddress);
-    // Use predictedAddresses and selectedChains to add undeployed Safes
     selectedChains.forEach((chain) => {
       const address = predictedAddresses[chain.id];
       if (address) {
-        addSafe(
-          String(chain.id),
-          address,
-          {
-            props: {
-              factoryAddress: "",
-              masterCopy: "",
-              safeAccountConfig: {
-                owners: validSigners,
-                threshold,
-              },
-              saltNonce: saltNonce.toString(),
-              safeVersion: "",
+        // Add to undeployedSafes as before
+        addSafe(String(chain.id), address, safeName.trim() || randomName, {
+          props: {
+            factoryAddress: "",
+            masterCopy: "",
+            safeAccountConfig: {
+              owners: validSigners,
+              threshold,
             },
-            status: {
-              status: PendingSafeStatus.AWAITING_EXECUTION,
-              type: PayMethod.PayLater,
-            },
+            saltNonce: saltNonce.toString(),
+            safeVersion: "",
           },
-          false,
-        );
+          status: {
+            status: PendingSafeStatus.AWAITING_EXECUTION,
+            type: PayMethod.PayLater,
+          },
+        });
       }
     });
     router.push("/accounts");
@@ -316,6 +313,7 @@ export default function CreateSafeClient() {
           {currentStep === 2 ? (
             <AppCard title="Review & Validate Safe Account" className="w-full">
               <SafeDetails
+                safeName={safeName.trim() || randomName}
                 selectedNetworks={selectedChains}
                 signers={signers}
                 threshold={threshold}
@@ -397,6 +395,7 @@ export default function CreateSafeClient() {
               <div className="col-span-10 col-start-2 md:col-span-5 md:col-start-auto">
                 <AppCard title="Safe Account Preview">
                   <SafeDetails
+                    safeName={safeName.trim() || randomName}
                     selectedNetworks={selectedChains}
                     signers={signers}
                     threshold={threshold}

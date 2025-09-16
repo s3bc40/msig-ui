@@ -8,14 +8,17 @@ import { useChains } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import useNewSafe from "@/app/hooks/useNewSafe";
+import { getRandomSafeName, sanitizeUserInput } from "@/app/utils/helpers";
 
 export default function ConnectSafeClient() {
   const chains = useChains();
-  const { addSafe } = useSafeWalletContext();
+  const { addSafe, safeWalletData } = useSafeWalletContext();
   const { connectNewSafe } = useNewSafe();
   const router = useRouter();
 
-  // State for address, chain, error, loading
+  // State for name, address, chain, error, loading
+  const [safeName, setSafeName] = useState<string>("");
+  const [randomName] = useState(() => getRandomSafeName());
   const [safeAddress, setSafeAddress] = useState<`0x${string}`>(
     "" as `0x${string}`,
   );
@@ -39,6 +42,17 @@ export default function ConnectSafeClient() {
       setLoading(false);
       return;
     }
+    // Validate name
+    const nameToStore = safeName || randomName;
+    // Check if already registered
+    const addressBook = safeWalletData.data.addressBook;
+    if (addressBook[selectedChain] && addressBook[selectedChain][safeAddress]) {
+      setError(
+        "This Safe address is already registered on the selected network.",
+      );
+      setLoading(false);
+      return;
+    }
     // Optionally check deployment
     try {
       const safeMeta = await connectNewSafe(safeAddress, Number(selectedChain));
@@ -52,7 +66,8 @@ export default function ConnectSafeClient() {
         setLoading(false);
         return;
       }
-      addSafe(selectedChain, safeAddress, safeMeta, true);
+      // Store in addressBook with name
+      addSafe(selectedChain, safeAddress, nameToStore);
       router.push("/accounts");
     } catch (err) {
       setError(
@@ -80,6 +95,22 @@ export default function ConnectSafeClient() {
           selected network. If your Safe is not yet deployed, please use the
           Create Safe flow.
         </div>
+        <fieldset className="fieldset w-full">
+          <legend className="fieldset-legend">Safe Name</legend>
+          <input
+            type="text"
+            className="input input-bordered flex-1"
+            placeholder={randomName}
+            value={safeName}
+            onChange={(e) => setSafeName(sanitizeUserInput(e.target.value))}
+            disabled={loading}
+          />
+          <label className="label">
+            <span className="label-text-alt">
+              If left blank, a random name will be generated.
+            </span>
+          </label>
+        </fieldset>
         <fieldset className="fieldset w-full">
           <legend className="fieldset-legend">Safe Address</legend>
           <input

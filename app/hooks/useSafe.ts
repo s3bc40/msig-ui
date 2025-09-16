@@ -12,9 +12,15 @@ import { useSafeKitContext } from "../provider/SafeKitProvider";
 
 export default function useSafe(safeAddress: `0x${string}`) {
   const { address: signer, chain, connector } = useAccount();
-  const { safeWalletData, contractNetworks, addSafe, removeSafe } =
-    useSafeWalletContext();
+  const { safeWalletData, contractNetworks, addSafe } = useSafeWalletContext();
   const { getKit, setKit } = useSafeKitContext();
+
+  // Get Safe name from addressBook for current chain
+  const chainId = chain?.id ? String(chain.id) : undefined;
+  let safeName = "";
+  if (chainId && safeWalletData.data.addressBook[chainId]?.[safeAddress]) {
+    safeName = safeWalletData.data.addressBook[chainId]?.[safeAddress];
+  }
 
   const [safeInfo, setSafeInfo] = useState<{
     owners: `0x${string}`[];
@@ -30,11 +36,11 @@ export default function useSafe(safeAddress: `0x${string}`) {
   const [error, setError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [readOnly, setReadOnly] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
 
   // Get Safe info from context
-  const chainId = chain?.id ? String(chain.id) : undefined;
   const deployedSafe =
-    chainId && safeWalletData.data.addedSafes[chainId]?.[safeAddress];
+    chainId && safeWalletData.data.addressBook[chainId]?.[safeAddress];
   const undeployedSafe =
     chainId && safeWalletData.data.undeployedSafes[chainId]?.[safeAddress];
 
@@ -50,10 +56,37 @@ export default function useSafe(safeAddress: `0x${string}`) {
       if (!safeAddress || !chainId) {
         setSafeInfo(null);
         kitRef.current = null;
+        setIsOwner(false);
+        setReadOnly(true);
+        setUnavailable(true);
         setIsLoading(false);
         return;
       }
-      if (deployedSafe) {
+      if (undeployedSafe) {
+        setSafeInfo({
+          owners: undeployedSafe.props.safeAccountConfig
+            .owners as `0x${string}`[],
+          balance: BigInt(0),
+          threshold: undeployedSafe.props.safeAccountConfig.threshold,
+          version: undeployedSafe.props.safeVersion || "1.4.1",
+          chainId,
+          deployed: false,
+          nonce: 0,
+          undeployedConfig: undeployedSafe.props,
+        });
+        kitRef.current = null;
+        setIsOwner(
+          undeployedSafe.props.safeAccountConfig.owners.includes(
+            signer as `0x${string}`,
+          ),
+        );
+        setReadOnly(
+          !undeployedSafe.props.safeAccountConfig.owners.includes(
+            signer as `0x${string}`,
+          ),
+        );
+        setUnavailable(false);
+      } else if (deployedSafe) {
         try {
           const provider = await getMinimalEIP1193Provider(connector);
           if (!provider) throw new Error("No provider available");
@@ -90,6 +123,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
           });
           setIsOwner(await kit.isOwner(signer as `0x${string}`));
           setReadOnly(!(await kit.isOwner(signer as `0x${string}`)));
+          setUnavailable(false);
         } catch {
           setError("Failed to fetch Safe data from chain");
           setSafeInfo(null);
@@ -97,34 +131,12 @@ export default function useSafe(safeAddress: `0x${string}`) {
           setIsOwner(false);
           setReadOnly(true);
         }
-      } else if (undeployedSafe) {
-        setSafeInfo({
-          owners: undeployedSafe.props.safeAccountConfig
-            .owners as `0x${string}`[],
-          balance: BigInt(0),
-          threshold: undeployedSafe.props.safeAccountConfig.threshold,
-          version: undeployedSafe.props.safeVersion || "1.4.1",
-          chainId,
-          deployed: false,
-          nonce: 0,
-          undeployedConfig: undeployedSafe.props,
-        });
-        kitRef.current = null;
-        setIsOwner(
-          undeployedSafe.props.safeAccountConfig.owners.includes(
-            signer as `0x${string}`,
-          ),
-        );
-        setReadOnly(
-          !undeployedSafe.props.safeAccountConfig.owners.includes(
-            signer as `0x${string}`,
-          ),
-        );
       } else {
         setSafeInfo(null);
         kitRef.current = null;
         setIsOwner(false);
         setReadOnly(true);
+        setUnavailable(true);
       }
       setIsLoading(false);
     }
@@ -173,16 +185,17 @@ export default function useSafe(safeAddress: `0x${string}`) {
 
   return {
     safeInfo,
+    safeName,
     isLoading,
     error,
     isOwner,
     readOnly,
+    unavailable,
     buildTransaction,
     signTransaction,
     broadcastTransaction,
     connectSafe,
     addSafe,
-    removeSafe,
     contractNetworks,
     safeWalletData,
     kit: kitRef.current,

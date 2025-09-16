@@ -58,6 +58,7 @@ export default function useNewSafe() {
       threshold: number,
       chain: Chain,
       saltNonce: string | undefined,
+      safeName: string,
       setDeploySteps: (steps: SafeDeployStep[]) => void,
     ): Promise<SafeDeployStep[]> => {
       const steps: SafeDeployStep[] = [
@@ -140,42 +141,29 @@ export default function useNewSafe() {
           setDeploySteps([...steps]);
           // Add to addedSafes if deployed, else to undeployedSafes
           if (isDeployed) {
-            addSafe(
-              String(chain.id),
-              safeAddress,
-              {
-                owners,
-                threshold,
-              },
-              true,
-            );
+            // Store deployed safe in addressBook only
+            addSafe(String(chain.id), safeAddress, safeName);
           } else {
             const chainContracts = contractNetworks
               ? contractNetworks[String(chain.id)]
               : {};
-            addSafe(
-              String(chain.id),
-              safeAddress,
-              {
-                props: {
-                  factoryAddress: chainContracts?.safeProxyFactoryAddress || "",
-                  masterCopy: chainContracts?.safeSingletonAddress || "",
-                  safeAccountConfig: {
-                    owners,
-                    threshold,
-                    fallbackHandler:
-                      chainContracts?.fallbackHandlerAddress || "",
-                  },
-                  saltNonce: saltNonce || "",
-                  safeVersion: "1.4.1", // @TODO dynamic later
+            addSafe(String(chain.id), safeAddress, safeName, {
+              props: {
+                factoryAddress: chainContracts?.safeProxyFactoryAddress || "",
+                masterCopy: chainContracts?.safeSingletonAddress || "",
+                safeAccountConfig: {
+                  owners,
+                  threshold,
+                  fallbackHandler: chainContracts?.fallbackHandlerAddress || "",
                 },
-                status: {
-                  status: PendingSafeStatus.AWAITING_EXECUTION,
-                  type: PayMethod.PayLater,
-                },
+                saltNonce: saltNonce || "",
+                safeVersion: "1.4.1", // @TODO dynamic later
               },
-              true,
-            );
+              status: {
+                status: PendingSafeStatus.AWAITING_EXECUTION,
+                type: PayMethod.PayLater,
+              },
+            });
           }
         } catch (err) {
           steps[3].status = "error";

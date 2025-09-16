@@ -24,13 +24,8 @@ export interface SafeWalletContextType {
   addSafe: (
     chainId: string,
     safeAddress: string,
-    safeConfig: UndeployedSafe | { owners: string[]; threshold: number },
-    deployed?: boolean,
-  ) => void;
-  removeSafe: (
-    chainId: string,
-    safeAddress: string,
-    deployed?: boolean,
+    safeName: string,
+    safeConfig?: UndeployedSafe,
   ) => void;
   importSafeWalletData: (data: SafeWalletData) => void;
   exportSafeWalletData: () => string;
@@ -97,61 +92,42 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
   const addSafe = (
     chainId: string,
     safeAddress: string,
-    safeConfig: UndeployedSafe | { owners: string[]; threshold: number },
-    deployed = false,
+    safeName: string,
+    safeConfig?: UndeployedSafe,
   ) => {
     setSafeWalletData((prev) => {
       const data = { ...prev.data };
-      if (deployed) {
-        if (!data.addedSafes[chainId]) data.addedSafes[chainId] = {};
-        // Only accept { owners, threshold } for deployed
-        if (
-          typeof safeConfig === "object" &&
-          "owners" in safeConfig &&
-          "threshold" in safeConfig &&
-          !("props" in safeConfig)
-        ) {
-          data.addedSafes[chainId][safeAddress] = {
-            owners: safeConfig.owners,
-            threshold: safeConfig.threshold,
-          };
-        } else {
-          // If passed UndeployedSafe by mistake, extract owners/threshold from props
-          const undeployed = safeConfig as UndeployedSafe;
-          data.addedSafes[chainId][safeAddress] = {
-            owners: undeployed.props.safeAccountConfig.owners,
-            threshold: undeployed.props.safeAccountConfig.threshold,
-          };
-        }
-      } else {
+      if (safeConfig) {
         if (!data.undeployedSafes[chainId]) data.undeployedSafes[chainId] = {};
         // Only accept UndeployedSafe for undeployed
-        data.undeployedSafes[chainId][safeAddress] =
-          safeConfig as UndeployedSafe;
+        data.undeployedSafes[chainId][safeAddress] = safeConfig;
       }
+      // Store safe in addressBook with name
+      if (!data.addressBook[chainId]) data.addressBook[chainId] = {};
+      data.addressBook[chainId][safeAddress] = safeName;
       return { ...prev, data };
     });
   };
 
-  const removeSafe = (
-    chainId: string,
-    safeAddress: string,
-    deployed = false,
-  ) => {
-    setSafeWalletData((prev) => {
-      const data = { ...prev.data };
-      if (deployed) {
-        if (data.addedSafes[chainId]) {
-          delete data.addedSafes[chainId][safeAddress];
-        }
-      } else {
-        if (data.undeployedSafes[chainId]) {
-          delete data.undeployedSafes[chainId][safeAddress];
-        }
-      }
-      return { ...prev, data };
-    });
-  };
+  // const removeSafe = (
+  //   chainId: string,
+  //   safeAddress: string,
+  //   deployed = false,
+  // ) => {
+  //   setSafeWalletData((prev) => {
+  //     const data = { ...prev.data };
+  //     if (deployed) {
+  //       if (data.addressBook[chainId]) {
+  //         delete data.addressBook[chainId][safeAddress];
+  //       }
+  //     } else {
+  //       if (data.undeployedSafes[chainId]) {
+  //         delete data.undeployedSafes[chainId][safeAddress];
+  //       }
+  //     }
+  //     return { ...prev, data };
+  //   });
+  // };
 
   const importSafeWalletData = (data: SafeWalletData) => {
     setSafeWalletData(data);
@@ -168,7 +144,6 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
         setSafeWalletData,
         contractNetworks,
         addSafe,
-        removeSafe,
         importSafeWalletData,
         exportSafeWalletData,
       }}
