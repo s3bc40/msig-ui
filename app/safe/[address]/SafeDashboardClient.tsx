@@ -258,14 +258,12 @@ export default function SafeDashboardClient({
         selectedNetwork={chain}
         onClose={handleCloseModal}
         closeLabel="Close"
-        redirectLabel={
-          isDeploySuccess(deploySteps, deployTxHash)
-            ? "Go to Accounts"
-            : undefined
+        successLabel={
+          isDeploySuccess(deploySteps, deployTxHash) ? "Go to Safe" : undefined
         }
-        redirectTo={
+        onSuccess={
           isDeploySuccess(deploySteps, deployTxHash)
-            ? "/safe/" + safeAddress
+            ? handleCloseModal
             : undefined
         }
       />

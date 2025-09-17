@@ -444,14 +444,14 @@ export default function CreateSafeClient() {
         selectedNetwork={chain}
         onClose={handleCloseModal}
         closeLabel="Close"
-        redirectLabel={
+        successLabel={
           isDeploySuccess(deploySteps, deployTxHash, predictedAddresses)
             ? "Go to Accounts"
             : undefined
         }
-        redirectTo={
+        onSuccess={
           isDeploySuccess(deploySteps, deployTxHash, predictedAddresses)
-            ? "/accounts"
+            ? () => router.push("/accounts")
             : undefined
         }
       />

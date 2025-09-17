@@ -1,7 +1,6 @@
 import React from "react";
 import AppAddress from "@/app/components/AppAddress";
 import { Chain } from "viem";
-import { useRouter } from "next/navigation";
 
 export interface WorkflowModalProps {
   open: boolean;
@@ -12,8 +11,8 @@ export interface WorkflowModalProps {
   selectedNetwork?: Chain;
   onClose: () => void;
   closeLabel?: string;
-  redirectLabel?: string;
-  redirectTo?: string;
+  onSuccess?: () => void;
+  successLabel?: string;
 }
 
 const WorkflowModal: React.FC<WorkflowModalProps> = ({
@@ -25,10 +24,9 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
   selectedNetwork,
   onClose,
   closeLabel = "Close",
-  redirectLabel,
-  redirectTo,
+  onSuccess,
+  successLabel,
 }) => {
-  const router = useRouter();
   if (!open) return null;
   return (
     <dialog
@@ -80,17 +78,18 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
           )}
         </div>
         <div className="flex justify-center gap-4">
-          {redirectTo && redirectLabel ? (
+          {onSuccess && successLabel ? (
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => router.push(redirectTo)}
+              onClick={() => onSuccess()}
             >
-              {redirectLabel}
+              {successLabel}
             </button>
           ) : (
             <button
               type="button"
+              disabled={!error}
               className="btn btn-secondary"
               onClick={onClose}
             >
