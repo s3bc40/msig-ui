@@ -4,9 +4,15 @@ import AppAddress from "@/app/components/AppAddress";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import useSafe from "@/app/hooks/useSafe";
-import React from "react";
+import { WorkflowModal } from "@/app/components/WorkflowModal";
+import {
+  DEFAULT_DEPLOY_STEPS,
+  STEPS_DEPLOY_LABEL,
+} from "@/app/utils/constants";
+import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
+import { SafeDeployStep } from "@/app/utils/types";
 
 export default function SafeDashboardClient({
   safeAddress,
@@ -26,7 +32,62 @@ export default function SafeDashboardClient({
     buildTransaction,
     signTransaction,
     broadcastTransaction,
+    deployUndeployedSafe,
   } = useSafe(safeAddress);
+
+  // Modal state for deployment
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deploySteps, setDeploySteps] =
+    useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
+  const [deployError, setDeployError] = useState<string | null>(null);
+  const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
+
+  // Handler for deploying undeployed Safe
+  async function handleDeployUndeployedSafe() {
+    setModalOpen(true);
+    setDeployError(null);
+    // Deep copy to reset steps
+    setDeploySteps(DEFAULT_DEPLOY_STEPS.map((step) => ({ ...step })));
+    setDeployTxHash(null);
+    try {
+      const steps = await deployUndeployedSafe(setDeploySteps);
+      setDeploySteps([...steps]);
+      // Set txHash from any step that has it
+      const txStep = steps.find((s) => s.txHash);
+      if (txStep && txStep.txHash) {
+        setDeployTxHash(txStep.txHash);
+      }
+      // If any step failed, set error and keep modal open
+      if (steps.some((s) => s.status === "error")) {
+        const errorStep = steps.find((s) => s.status === "error");
+        setDeployError(
+          errorStep && errorStep.error
+            ? `Deployment error: ${errorStep.error}`
+            : "Deployment error",
+        );
+        return;
+      }
+    } catch {
+      setDeployError("Unexpected deployment error");
+    }
+  }
+
+  function handleCloseModal() {
+    setModalOpen(false);
+    // Deep copy to reset steps
+    setDeploySteps(DEFAULT_DEPLOY_STEPS.map((step) => ({ ...step })));
+  }
+
+  function isDeploySuccess(
+    deploySteps: SafeDeployStep[],
+    deployTxHash: string | null,
+  ) {
+    return (
+      deploySteps.length > 0 &&
+      deploySteps.every((s) => s.status === "success") &&
+      !!deployTxHash
+    );
+  }
 
   // Example: Dummy tx data for demonstration
   const dummyTx = {
@@ -128,7 +189,10 @@ export default function SafeDashboardClient({
                   using multi-signature features.
                 </div>
                 {isOwner ? (
-                  <button className="btn btn-primary w-full">
+                  <button
+                    className="btn btn-primary w-full"
+                    onClick={handleDeployUndeployedSafe}
+                  >
                     Deploy Safe
                   </button>
                 ) : (
@@ -184,6 +248,27 @@ export default function SafeDashboardClient({
           </div>
         </AppCard>
       </div>
+      {/* Modal for deployment workflow */}
+      <WorkflowModal
+        open={modalOpen}
+        steps={deploySteps}
+        stepLabels={STEPS_DEPLOY_LABEL}
+        txHash={deployTxHash}
+        error={deployError}
+        selectedNetwork={chain}
+        onClose={handleCloseModal}
+        closeLabel="Close"
+        redirectLabel={
+          isDeploySuccess(deploySteps, deployTxHash)
+            ? "Go to Accounts"
+            : undefined
+        }
+        redirectTo={
+          isDeploySuccess(deploySteps, deployTxHash)
+            ? "/safe/" + safeAddress
+            : undefined
+        }
+      />
     </AppSection>
   );
 }

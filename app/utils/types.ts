@@ -70,7 +70,7 @@ export type ReplayedSafeProps = {
   masterCopy: string;
   safeAccountConfig: {
     threshold: number;
-    owners: string[];
+    owners: `0x${string}`[];
     fallbackHandler?: string;
     to?: string;
     data?: string;

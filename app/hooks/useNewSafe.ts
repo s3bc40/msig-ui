@@ -12,6 +12,7 @@ import { waitForTransactionReceipt } from "viem/actions";
 import { Chain, zeroAddress } from "viem";
 import { useAccount, useSwitchChain } from "wagmi";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
+import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
 
 export default function useNewSafe() {
   // Wagmi hooks
@@ -61,12 +62,9 @@ export default function useNewSafe() {
       safeName: string,
       setDeploySteps: (steps: SafeDeployStep[]) => void,
     ): Promise<SafeDeployStep[]> => {
-      const steps: SafeDeployStep[] = [
-        { step: "txCreated", status: "idle" },
-        { step: "txSent", status: "idle" },
-        { step: "confirmed", status: "idle" },
-        { step: "deployed", status: "idle" },
-      ];
+      const steps: SafeDeployStep[] = DEFAULT_DEPLOY_STEPS.map((step) => ({
+        ...step,
+      }));
       try {
         steps[0].status = "running";
         setDeploySteps([...steps]);
@@ -90,6 +88,7 @@ export default function useNewSafe() {
         let deploymentTx, kitClient, txHash;
         try {
           deploymentTx = await kit.createSafeDeploymentTransaction();
+          console.log("Creating deployment transaction...");
           kitClient = await kit.getSafeProvider().getExternalSigner();
           steps[0].status = "success";
           steps[1].status = "running";

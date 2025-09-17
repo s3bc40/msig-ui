@@ -1,3 +1,5 @@
+import { SafeDeployStep } from "./types";
+
 // Simple random name generator (adjective + noun)
 export const ADJECTIVES = [
   "Gracious",
@@ -23,3 +25,36 @@ export const NOUNS = [
   "Stronghold",
   "Keep",
 ];
+
+// Steps for handling a Safe deployments
+export const CREATE_STEPS = ["Networks", "Signers & Threshold", "Validate"];
+
+export const STEPS_DEPLOY_LABEL = {
+  txCreated: "Tx Created",
+  txSent: "Tx Sent",
+  confirmed: "Confirmed",
+  deployed: "Deployed",
+};
+
+export const STEPS_CONNECT_LABEL = {
+  pending: "Pending",
+  connecting: "Connecting",
+  connected: "Connected",
+};
+
+export const DEFAULT_DEPLOY_STEPS: SafeDeployStep[] = [
+  { step: "txCreated", status: "idle" },
+  { step: "txSent", status: "idle" },
+  { step: "confirmed", status: "idle" },
+  { step: "deployed", status: "idle" },
+];
+
+export const DEFAULT_SAFE_WALLET_DATA = {
+  version: "3.0", // current version?
+  data: {
+    addressBook: {},
+    addedSafes: {},
+    undeployedSafes: {},
+    visitedSafes: {},
+  },
+};

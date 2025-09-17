@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "anvil": "anvil --load-state ./anvil-safe-state.json"
+    "anvil": "anvil --load-state ./anvil-safe-state.json --block-time 1"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.8",

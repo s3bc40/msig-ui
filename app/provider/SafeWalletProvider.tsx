@@ -15,6 +15,7 @@ import type { SafeWalletData, UndeployedSafe } from "../utils/types";
 import { buildContractNetworks } from "../utils/contractNetworks";
 import type { ContractNetworks } from "../utils/contractNetworks";
 import { useChains } from "wagmi";
+import { DEFAULT_SAFE_WALLET_DATA } from "../utils/constants";
 
 // -- Interfaces and Context --
 export interface SafeWalletContextType {
@@ -27,8 +28,11 @@ export interface SafeWalletContextType {
     safeName: string,
     safeConfig?: UndeployedSafe,
   ) => void;
-  importSafeWalletData: (data: SafeWalletData) => void;
-  exportSafeWalletData: () => string;
+  removeSafe: (
+    chainId: string,
+    safeAddress: string,
+    deployed?: boolean,
+  ) => void;
 }
 
 export const SafeWalletContext = createContext<
@@ -47,25 +51,11 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     ContractNetworks | undefined
   >();
 
-  // Initialize SafeWalletData from localStorage or default
-  const defaultSafeWalletData = React.useMemo<SafeWalletData>(
-    () => ({
-      version: "3.0", // current version?
-      data: {
-        addressBook: {},
-        addedSafes: {},
-        undeployedSafes: {},
-        visitedSafes: {},
-      },
-    }),
-    [],
-  );
+  const [safeWalletData, setSafeWalletData] = useState<SafeWalletData>(() => ({
+    ...DEFAULT_SAFE_WALLET_DATA,
+  }));
+  const [loaded, setLoaded] = useState(false);
 
-  const [safeWalletData, setSafeWalletData] = useState<SafeWalletData>(
-    defaultSafeWalletData,
-  );
-
-  // Load SafeWalletData from localStorage and build contractNetworks on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("msigWalletData");
@@ -73,21 +63,27 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
         try {
           setSafeWalletData(JSON.parse(stored));
         } catch {
-          setSafeWalletData(defaultSafeWalletData);
+          setSafeWalletData({
+            ...DEFAULT_SAFE_WALLET_DATA,
+          });
         }
       }
-      // Build contractNetworks once chains are available
-      const chainIds = chains.map((c) => c.id);
-      buildContractNetworks(chainIds)
-        .then(setContractNetworks)
-        .catch(() => setContractNetworks(undefined));
+      setLoaded(true);
     }
-  }, [defaultSafeWalletData, chains]);
+  }, []);
 
-  // Persist SafeWalletData to localStorage on change
   useEffect(() => {
-    localStorage.setItem("msigWalletData", JSON.stringify(safeWalletData));
-  }, [safeWalletData]);
+    if (loaded) {
+      localStorage.setItem("msigWalletData", JSON.stringify(safeWalletData));
+    }
+  }, [safeWalletData, loaded]);
+  // Build contractNetworks whenever chains change
+  useEffect(() => {
+    const chainIds = chains.map((c) => c.id);
+    buildContractNetworks(chainIds)
+      .then(setContractNetworks)
+      .catch(() => setContractNetworks(undefined));
+  }, [chains]);
 
   const addSafe = (
     chainId: string,
@@ -109,33 +105,33 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  // const removeSafe = (
-  //   chainId: string,
-  //   safeAddress: string,
-  //   deployed = false,
-  // ) => {
-  //   setSafeWalletData((prev) => {
-  //     const data = { ...prev.data };
-  //     if (deployed) {
-  //       if (data.addressBook[chainId]) {
-  //         delete data.addressBook[chainId][safeAddress];
-  //       }
-  //     } else {
-  //       if (data.undeployedSafes[chainId]) {
-  //         delete data.undeployedSafes[chainId][safeAddress];
-  //       }
-  //     }
-  //     return { ...prev, data };
-  //   });
+  const removeSafe = (
+    chainId: string,
+    safeAddress: string,
+    deployed = false,
+  ) => {
+    setSafeWalletData((prev) => {
+      const data = { ...prev.data };
+      if (deployed) {
+        if (data.addressBook[chainId]) {
+          delete data.addressBook[chainId][safeAddress];
+        }
+      } else {
+        if (data.undeployedSafes[chainId]) {
+          delete data.undeployedSafes[chainId][safeAddress];
+        }
+      }
+      return { ...prev, data };
+    });
+  };
+
+  // const importSafeWalletData = (data: SafeWalletData) => {
+  //   setSafeWalletData(data);
   // };
 
-  const importSafeWalletData = (data: SafeWalletData) => {
-    setSafeWalletData(data);
-  };
-
-  const exportSafeWalletData = () => {
-    return JSON.stringify(safeWalletData, null, 2);
-  };
+  // const exportSafeWalletData = () => {
+  //   return JSON.stringify(safeWalletData, null, 2);
+  // };
 
   return (
     <SafeWalletContext.Provider
@@ -144,8 +140,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
         setSafeWalletData,
         contractNetworks,
         addSafe,
-        importSafeWalletData,
-        exportSafeWalletData,
+        removeSafe,
       }}
     >
       {children}

@@ -10,7 +10,7 @@ export default function BtnCancel({
   noArrow?: boolean;
 }) {
   return (
-    <Link className="btn btn-ghost btn-secondary" href={href}>
+    <Link className="btn btn-ghost btn-secondary align" href={href}>
       {noArrow ? null : "←"} {label || "Cancel"}
     </Link>
   );

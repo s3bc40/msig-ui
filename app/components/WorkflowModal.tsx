@@ -1,7 +1,7 @@
 import React from "react";
 import AppAddress from "@/app/components/AppAddress";
 import { Chain } from "viem";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export interface WorkflowModalProps {
   open: boolean;
@@ -11,8 +11,9 @@ export interface WorkflowModalProps {
   error?: string | null;
   selectedNetwork?: Chain;
   onClose: () => void;
-  showGoToAccounts?: boolean;
   closeLabel?: string;
+  redirectLabel?: string;
+  redirectTo?: string;
 }
 
 const WorkflowModal: React.FC<WorkflowModalProps> = ({
@@ -23,9 +24,11 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
   error,
   selectedNetwork,
   onClose,
-  showGoToAccounts = false,
   closeLabel = "Close",
+  redirectLabel,
+  redirectTo,
 }) => {
+  const router = useRouter();
   if (!open) return null;
   return (
     <dialog
@@ -77,7 +80,15 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
           )}
         </div>
         <div className="flex justify-center gap-4">
-          {error ? (
+          {redirectTo && redirectLabel ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => router.push(redirectTo)}
+            >
+              {redirectLabel}
+            </button>
+          ) : (
             <button
               type="button"
               className="btn btn-secondary"
@@ -85,11 +96,6 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
             >
               {closeLabel}
             </button>
-          ) : null}
-          {showGoToAccounts && !error && (
-            <Link type="button" className="btn btn-primary" href="/accounts">
-              Go to Accounts
-            </Link>
           )}
         </div>
       </div>

@@ -11,8 +11,12 @@ import StepNetworks from "./components/StepNameAndNetworks";
 import SafeDetails from "../components/SafeDetails";
 import Stepper from "./components/Stepper";
 import { WorkflowModal } from "@/app/components/WorkflowModal";
-import { isValidAddress } from "../helpers";
-import { CREATE_STEPS, STEPS_DEPLOY_LABEL } from "../constants";
+import { isValidAddress } from "@/app/utils/helpers";
+import {
+  CREATE_STEPS,
+  DEFAULT_DEPLOY_STEPS,
+  STEPS_DEPLOY_LABEL,
+} from "@/app/utils/constants";
 import { useRouter } from "next/navigation";
 import useNewSafe from "@/app/hooks/useNewSafe";
 import {
@@ -28,14 +32,15 @@ export default function CreateSafeClient() {
   const { address: signer, chain } = useAccount();
   const chains = useChains();
   const router = useRouter();
-  const { addSafe } = useSafeWalletContext();
+  const { addSafe, contractNetworks } = useSafeWalletContext();
   const { predictNewSafeAddress, deployNewSafe } = useNewSafe();
 
   // Local UI state for feedback
   const [isPredicting, setIsPredicting] = useState(false);
   const [predictError, setPredictError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [deploySteps, setDeploySteps] = useState<SafeDeployStep[]>([]);
+  const [deploySteps, setDeploySteps] =
+    useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
 
@@ -178,20 +183,20 @@ export default function CreateSafeClient() {
       setPredictError(null);
       const validSigners = signers.filter(isValidAddress);
       try {
-        const {
-          safeAddress,
-          saltNonce: foundSaltNonce,
-          predictions,
-        } = await predictConsistentSafeAddressAcrossChains(
-          validSigners,
-          threshold,
-          selectedChains,
-          saltNonce.toString(),
-        );
+        const { saltNonce: foundSaltNonce, predictions } =
+          await predictConsistentSafeAddressAcrossChains(
+            validSigners,
+            threshold,
+            selectedChains,
+            saltNonce.toString(),
+          );
         if (!cancelled) {
           setPredictedAddresses(
             Object.fromEntries(
-              Object.entries(predictions).map(([id, p]) => [id, p.address]),
+              Object.entries(predictions).map(([id, prediction]) => [
+                id,
+                prediction.address,
+              ]),
             ),
           );
           setSaltNonce(Number(foundSaltNonce));
@@ -228,12 +233,8 @@ export default function CreateSafeClient() {
     setModalOpen(true);
     setIsDeploying(true);
     setDeployError(null);
-    setDeploySteps([
-      { step: "txCreated", status: "idle" },
-      { step: "txSent", status: "idle" },
-      { step: "confirmed", status: "idle" },
-      { step: "deployed", status: "idle" },
-    ]);
+    // Deep copy to reset steps
+    setDeploySteps(DEFAULT_DEPLOY_STEPS.map((step) => ({ ...step })));
     setDeployTxHash(null);
     try {
       const validSigners = signers.filter(isValidAddress);
@@ -245,7 +246,7 @@ export default function CreateSafeClient() {
         safeName.trim() || randomName,
         setDeploySteps,
       );
-      setDeploySteps(steps);
+      setDeploySteps([...steps]);
       // Set txHash from any step that has it
       const txStep = steps.find((s) => s.txHash);
       if (txStep && txStep.txHash) {
@@ -261,8 +262,12 @@ export default function CreateSafeClient() {
         );
         return;
       }
-    } catch {
-      setDeployError("Unexpected deployment error");
+    } catch (e: unknown) {
+      const errorMessage =
+        typeof e === "object" && e !== null && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : "Unexpected deployment error";
+      setDeployError(errorMessage);
     } finally {
       setIsDeploying(false);
       setSaltNonce(0);
@@ -271,6 +276,8 @@ export default function CreateSafeClient() {
 
   function handleCloseModal() {
     setModalOpen(false);
+    // Deep copy to reset steps
+    setDeploySteps(DEFAULT_DEPLOY_STEPS.map((step) => ({ ...step })));
   }
 
   async function handleValidateMultiChain() {
@@ -278,17 +285,24 @@ export default function CreateSafeClient() {
     selectedChains.forEach((chain) => {
       const address = predictedAddresses[chain.id];
       if (address) {
-        // Add to undeployedSafes as before
+        const chainContracts = contractNetworks
+          ? contractNetworks[String(chain.id)]
+          : {};
         addSafe(String(chain.id), address, safeName.trim() || randomName, {
           props: {
-            factoryAddress: "",
-            masterCopy: "",
+            // The Safe Proxy Factory contract is used to deploy new Safe contracts
+            factoryAddress: chainContracts?.safeProxyFactoryAddress || "",
+            // The Safe Singleton contract is the implementation logic for all Safes
+            masterCopy: chainContracts?.safeSingletonAddress || "",
             safeAccountConfig: {
               owners: validSigners,
               threshold,
+              // The fallback handler is used for modules and contract calls
+              fallbackHandler: chainContracts?.fallbackHandlerAddress || "",
             },
             saltNonce: saltNonce.toString(),
-            safeVersion: "",
+            // Safe version for this chain (should match contract deployment)
+            safeVersion: "1.4.1", // @TODO dynamic later
           },
           status: {
             status: PendingSafeStatus.AWAITING_EXECUTION,
@@ -298,6 +312,19 @@ export default function CreateSafeClient() {
       }
     });
     router.push("/accounts");
+  }
+
+  function isDeploySuccess(
+    deploySteps: SafeDeployStep[],
+    deployTxHash: string | null,
+    predictedAddresses: Record<string, `0x${string}` | null>,
+  ) {
+    return (
+      deploySteps.length > 0 &&
+      deploySteps.every((s) => s.status === "success") &&
+      !!deployTxHash &&
+      !!Object.values(predictedAddresses).every((addr) => !!addr)
+    );
   }
 
   return (
@@ -320,28 +347,29 @@ export default function CreateSafeClient() {
               />
               <div className="divider my-0" />
               <div className="flex flex-col gap-4">
-                {isPredicting && (
+                {isPredicting ? (
                   <div className="flex items-center gap-2">
                     <span>Predicting Safe address</span>
                     <span className="loading loading-dots loading-xs" />
                   </div>
-                )}
-                {Object.keys(predictedAddresses).length > 0 && (
-                  <div>
-                    <p className="mb-1 text-lg font-semibold">
-                      Predicted Safe Address:
-                    </p>
-                    <div className="flex flex-wrap gap-2 p-2">
-                      <AppAddress
-                        address={
-                          Object.values(predictedAddresses).find(
-                            (addr) => !!addr,
-                          ) || "N/A"
-                        }
-                        className="text-sm"
-                      />
+                ) : (
+                  Object.keys(predictedAddresses).length > 0 && (
+                    <div>
+                      <p className="mb-1 text-lg font-semibold">
+                        Predicted Safe Address:
+                      </p>
+                      <div className="flex flex-wrap gap-2 p-2">
+                        <AppAddress
+                          address={
+                            Object.values(predictedAddresses).find(
+                              (addr) => !!addr,
+                            ) || "N/A"
+                          }
+                          className="text-sm"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
                 {predictError && (
                   <div className="alert alert-error">{predictError}</div>
@@ -415,13 +443,17 @@ export default function CreateSafeClient() {
         error={deployError}
         selectedNetwork={chain}
         onClose={handleCloseModal}
-        showGoToAccounts={
-          deploySteps.length > 0 &&
-          deploySteps.every((s) => s.status === "success") &&
-          !!deployTxHash &&
-          !!Object.values(predictedAddresses).every((addr) => !!addr)
-        }
         closeLabel="Close"
+        redirectLabel={
+          isDeploySuccess(deploySteps, deployTxHash, predictedAddresses)
+            ? "Go to Accounts"
+            : undefined
+        }
+        redirectTo={
+          isDeploySuccess(deploySteps, deployTxHash, predictedAddresses)
+            ? "/accounts"
+            : undefined
+        }
       />
     </>
   );

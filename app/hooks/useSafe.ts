@@ -3,16 +3,21 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
 import {
   createConnectionConfig,
+  createPredictionConfig,
   getMinimalEIP1193Provider,
 } from "../utils/helpers";
 import Safe, { SafeConfig } from "@safe-global/protocol-kit";
 
 // Cache for protocolKit instances (per chainId+safeAddress)
 import { useSafeKitContext } from "../provider/SafeKitProvider";
+import { SafeDeployStep } from "../utils/types";
+import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
+import { waitForTransactionReceipt } from "viem/actions";
 
 export default function useSafe(safeAddress: `0x${string}`) {
   const { address: signer, chain, connector } = useAccount();
-  const { safeWalletData, contractNetworks, addSafe } = useSafeWalletContext();
+  const { safeWalletData, contractNetworks, addSafe, removeSafe } =
+    useSafeWalletContext();
   const { getKit, setKit } = useSafeKitContext();
 
   // Get Safe name from addressBook for current chain
@@ -124,12 +129,17 @@ export default function useSafe(safeAddress: `0x${string}`) {
           setIsOwner(await kit.isOwner(signer as `0x${string}`));
           setReadOnly(!(await kit.isOwner(signer as `0x${string}`)));
           setUnavailable(false);
-        } catch {
-          setError("Failed to fetch Safe data from chain");
+        } catch (e: unknown) {
+          if (e instanceof Error) {
+            setError(e.message);
+          } else {
+            setError("Failed to fetch Safe data from chain");
+          }
           setSafeInfo(null);
           kitRef.current = null;
           setIsOwner(false);
           setReadOnly(true);
+          setUnavailable(true);
         }
       } else {
         setSafeInfo(null);
@@ -155,6 +165,128 @@ export default function useSafe(safeAddress: `0x${string}`) {
     getKit,
     setKit,
   ]);
+
+  // Deploy an undeployed Safe using its config from SafeWalletData
+  const deployUndeployedSafe = useCallback(
+    async (
+      setDeploySteps: (steps: Array<SafeDeployStep>) => void,
+    ): Promise<Array<SafeDeployStep>> => {
+      if (!undeployedSafe || !connector || !signer || !chainId) {
+        return [
+          {
+            step: "txCreated",
+            status: "error",
+            error: "Missing Safe config, wallet connector, signer, or chainId.",
+          },
+        ];
+      }
+      const steps: SafeDeployStep[] = DEFAULT_DEPLOY_STEPS.map((step) => ({
+        ...step,
+      }));
+      try {
+        steps[0].status = "running";
+        setDeploySteps([...steps]);
+        const provider = await getMinimalEIP1193Provider(connector);
+        if (!provider) {
+          steps[0].status = "error";
+          steps[0].error = "No provider found";
+          setDeploySteps([...steps]);
+          return steps;
+        }
+        // Build SafeConfig using helper for ProtocolKit compatibility
+        const config: SafeConfig = createPredictionConfig(
+          provider,
+          signer,
+          undeployedSafe.props.safeAccountConfig.owners,
+          undeployedSafe.props.safeAccountConfig.threshold,
+          undeployedSafe.props.saltNonce,
+          contractNetworks,
+        );
+        const kit = await Safe.init(config);
+        let deploymentTx, kitClient, txHash;
+        try {
+          console.log("Creating deployment transaction with config:", config);
+          deploymentTx = await kit.createSafeDeploymentTransaction();
+          console.log("Deployment transaction created:", deploymentTx);
+          kitClient = await kit.getSafeProvider().getExternalSigner();
+          steps[0].status = "success";
+          steps[1].status = "running";
+          setDeploySteps([...steps]);
+        } catch (err) {
+          steps[0].status = "error";
+          steps[0].error = err instanceof Error ? err.message : String(err);
+          setDeploySteps([...steps]);
+          return steps;
+        }
+        try {
+          txHash = await kitClient!.sendTransaction({
+            to: deploymentTx.to as `0x${string}`,
+            value: BigInt(deploymentTx.value),
+            data: deploymentTx.data as `0x${string}`,
+            chain: chain,
+          });
+          steps[1].status = "success";
+          steps[1].txHash = txHash;
+          steps[2].status = "running";
+          setDeploySteps([...steps]);
+        } catch (err) {
+          steps[1].status = "error";
+          steps[1].error = err instanceof Error ? err.message : String(err);
+          setDeploySteps([...steps]);
+          return steps;
+        }
+        try {
+          if (txHash) {
+            // Wait for confirmation (replace with your preferred method)
+            await waitForTransactionReceipt(kitClient!, { hash: txHash });
+            steps[2].status = "success";
+            steps[2].txHash = txHash;
+            steps[3].status = "running";
+            setDeploySteps([...steps]);
+          }
+        } catch (err) {
+          steps[2].status = "error";
+          steps[2].error = err instanceof Error ? err.message : String(err);
+          setDeploySteps([...steps]);
+          return steps;
+        }
+        try {
+          const safeAddress = await kit.getAddress();
+          const newKit = await kit.connect({ safeAddress });
+          const isDeployed = await newKit.isSafeDeployed();
+          if (!isDeployed) throw new Error("Safe deployment not detected");
+          steps[3].status = "success";
+          steps[3].txHash = txHash;
+          setDeploySteps([...steps]);
+          // Update SafeWalletData: move from undeployed to deployed
+          addSafe(chainId, safeAddress, safeName);
+          removeSafe(chainId, safeAddress, false);
+        } catch (err) {
+          steps[3].status = "error";
+          steps[3].error = err instanceof Error ? err.message : String(err);
+          steps[3].txHash = txHash;
+          setDeploySteps([...steps]);
+          return steps;
+        }
+      } catch (err) {
+        steps[0].status = "error";
+        steps[0].error = err instanceof Error ? err.message : String(err);
+        setDeploySteps([...steps]);
+      }
+      return steps;
+    },
+    [
+      undeployedSafe,
+      connector,
+      signer,
+      chain,
+      chainId,
+      addSafe,
+      removeSafe,
+      safeName,
+      contractNetworks,
+    ],
+  );
 
   // Connect to Safe: placeholder for future logic
   const connectSafe = useCallback(async () => {
@@ -195,6 +327,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
     signTransaction,
     broadcastTransaction,
     connectSafe,
+    deployUndeployedSafe,
     addSafe,
     contractNetworks,
     safeWalletData,

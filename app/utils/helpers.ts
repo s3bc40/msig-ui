@@ -35,6 +35,7 @@ export async function getMinimalEIP1193Provider(
  * @param owners - Array of owner addresses
  * @param threshold - Number of required confirmations
  * @param saltNonce - Optional salt nonce for address prediction
+ * @param contractNetworks - Optional contract networks configuration
  * @returns Configuration object for Safe SDK and ProtocolKit
  */
 
@@ -91,7 +92,22 @@ export function getRandomSafeName() {
  */
 export function sanitizeUserInput(name: string): string {
   // Remove HTML tags, quotes, and angle brackets in one step
-  const sanitized = name.replace(/<[^>]*>/g, "").replace(/[><'"`]/g, "");
-  // Optionally trim and limit length
-  return sanitized.trim().slice(0, 64);
+  return name.replace(/<[^>]*>/g, "").replace(/[><'"`]/g, "");
+}
+
+// Address validation helper
+export function isValidAddress(address: string): address is `0x${string}` {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+// Compare prediction params
+export function havePredictionParamsChanged(
+  prev: { network: unknown; signers: string[]; threshold: number },
+  next: { network: unknown; signers: string[]; threshold: number },
+): boolean {
+  return (
+    prev.network !== next.network ||
+    prev.signers.join(",") !== next.signers.join(",") ||
+    prev.threshold !== next.threshold
+  );
 }
