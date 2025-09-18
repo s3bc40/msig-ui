@@ -3,7 +3,7 @@
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import { useState } from "react";
-import { encodeFunctionData } from "viem";
+import React from "react";
 
 type AbiFunctionItem = {
   type: string;
@@ -44,50 +44,52 @@ function handleAbiMethodSelect(
   }
 }
 
+// Utility function to parse ABI methods from JSON string
+function parseAbiMethodsFromJson(json: string): string[] {
+  try {
+    const abi = JSON.parse(json);
+    return getAbiMethods(abi);
+  } catch (err) {
+    return [];
+  }
+}
+
 export default function TxBuildPage() {
   // Form state
   const [to, setTo] = useState("");
   const [value, setValue] = useState("");
   const [data, setData] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [useAbi, setUseAbi] = useState(false);
+  const [showDataHex, setShowDataHex] = useState(false);
   const [abiJson, setAbiJson] = useState("");
   const [abiMethods, setAbiMethods] = useState<string[]>([]);
   const [selectedMethod, setSelectedMethod] = useState("");
   const [methodInputs, setMethodInputs] = useState<
     { name: string; type: string }[]
   >([]);
-  const [inputValues, setInputValues] = useState<Record<string, string>>({});
 
-  // Transaction preview
-  const preview = {
-    to,
-    value,
-    data: useAbi
-      ? (() => {
-          try {
-            const abi = JSON.parse(abiJson);
-            const args = methodInputs.map(
-              (input) => inputValues[input.name] ?? "",
-            );
-            return encodeFunctionData({
-              abi,
-              functionName: selectedMethod,
-              args,
-            });
-          } catch {
-            return "";
-          }
-        })()
-      : data,
-    method: useAbi ? selectedMethod : undefined,
-    params: useAbi
-      ? methodInputs.map((input) => ({
-          ...input,
-          value: inputValues[input.name] ?? "",
-        }))
-      : undefined,
-  };
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  // Transactions array state
+  const [transactions, setTransactions] = useState<
+    {
+      to: string;
+      value: string;
+      data: string;
+      operation?: number;
+      method: string;
+    }[]
+  >([]);
+
+  // Build Safe Transaction with ProtocolKit
+  async function handleBuildSafeTransaction() {
+    // TODO: Replace with actual ProtocolKit integration
+    // Example:
+    // const safeTransaction = await protocolKit.createTransaction({ transactions });
+    console.log("Building SafeTx with transactions:", transactions);
+    alert(
+      `SafeTx built with ${transactions.length} transaction(s). See console for details.`,
+    );
+  }
 
   function handleBuildTx(e: React.FormEvent) {
     e.preventDefault();
@@ -101,39 +103,45 @@ export default function TxBuildPage() {
       setError("Value must be a non-negative number.");
       return;
     }
-    let dataHex = data.trim();
-    if (useAbi) {
-      try {
-        const abi = JSON.parse(abiJson);
-        const args = methodInputs.map((input) => inputValues[input.name] ?? "");
-        dataHex = encodeFunctionData({
-          abi,
-          functionName: selectedMethod,
-          args,
-        });
-      } catch (err) {
-        setError(
-          "ABI encoding error: " +
-            (err instanceof Error ? err.message : String(err)),
-        );
-        return;
-      }
-    } else {
-      if (dataHex && !dataHex.startsWith("0x")) {
-        setError("Data must be hex and start with 0x.");
-        return;
-      }
+    const dataHex = data.trim();
+    let methodLabel = "Transfer";
+    if (dataHex) {
+      methodLabel = "Custom hex";
+    } else if (abiJson && abiMethods.length > 0 && selectedMethod) {
+      methodLabel = selectedMethod;
     }
-    // TODO: Integrate ProtocolKit transaction build logic here
-    console.log({ to: toAddr, value, data: dataHex });
+    setTransactions((txs) => [
+      ...txs,
+      {
+        to: toAddr,
+        value,
+        data: dataHex,
+        operation: 0, // Default to Call
+        method: methodLabel,
+      },
+    ]);
+    // Reset form
+    setTo("");
+    setValue("");
+    setData("");
+    setAbiJson("");
+    setAbiMethods([]);
+    setSelectedMethod("");
+    setMethodInputs([]);
+    setInputValues({});
+    setShowDataHex(false);
+  }
+  // Remove transaction from list
+  function handleRemoveTransaction(idx: number) {
+    setTransactions((txs) => txs.filter((_, i) => i !== idx));
   }
 
   return (
     <AppSection>
       <div className="flex w-full flex-col gap-4 self-center md:flex-row">
-        {/* Builder Form */}
+        {/* Builder Form (left) */}
         <div className="w-full md:w-1/2">
-          <AppCard title="Build Safe Transaction">
+          <AppCard title="Add Transaction">
             <form className="flex flex-col gap-4" onSubmit={handleBuildTx}>
               <fieldset className="fieldset">
                 <legend className="fieldset-legend">Recipient (to)</legend>
@@ -162,178 +170,157 @@ export default function TxBuildPage() {
                 />
               </fieldset>
               <fieldset className="fieldset">
-                <legend className="fieldset-legend">Data Encoding</legend>
-                <div className="flex items-center gap-4">
-                  <label className="label cursor-pointer">
-                    <span className="label-text">Raw Hex</span>
-                    <input
-                      type="radio"
-                      checked={!useAbi}
-                      onChange={() => setUseAbi(false)}
-                      className="radio ml-2"
-                    />
-                  </label>
-                  <label className="label cursor-pointer">
-                    <span className="label-text">ABI Encode</span>
-                    <input
-                      type="radio"
-                      checked={useAbi}
-                      onChange={() => setUseAbi(true)}
-                      className="radio ml-2"
-                    />
-                  </label>
-                </div>
+                <legend className="fieldset-legend">Contract ABI (JSON)</legend>
+                <textarea
+                  className="textarea textarea-bordered w-full"
+                  value={abiJson}
+                  onChange={(e) => {
+                    setAbiJson(e.target.value);
+                    setAbiMethods(parseAbiMethodsFromJson(e.target.value));
+                  }}
+                  placeholder="Paste contract ABI JSON here"
+                  rows={4}
+                />
               </fieldset>
-              {!useAbi ? (
+              {abiMethods.length > 0 && (
                 <fieldset className="fieldset">
-                  <legend className="fieldset-legend">Data (hex)</legend>
-                  <input
-                    type="text"
-                    className="input input-bordered w-full"
-                    value={data}
-                    onChange={(e) => setData(e.target.value)}
-                    placeholder="0x..."
-                    autoComplete="off"
-                  />
+                  <legend className="fieldset-legend">Method</legend>
+                  <select
+                    className="select select-bordered w-full"
+                    value={selectedMethod}
+                    onChange={(e) =>
+                      handleAbiMethodSelect(
+                        abiJson,
+                        e.target.value,
+                        setSelectedMethod,
+                        setMethodInputs,
+                        setInputValues,
+                      )
+                    }
+                  >
+                    <option value="">Select method</option>
+                    {abiMethods.map((method, idx) => (
+                      <option key={`${method}-${idx}`} value={method}>
+                        {method}
+                      </option>
+                    ))}
+                  </select>
                 </fieldset>
-              ) : (
-                <>
-                  <fieldset className="fieldset">
-                    <legend className="fieldset-legend">
-                      Contract ABI (JSON)
-                    </legend>
-                    <textarea
-                      className="textarea textarea-bordered w-full"
-                      value={abiJson}
-                      onChange={(e) => {
-                        setAbiJson(e.target.value);
-                        try {
-                          const abi = JSON.parse(e.target.value);
-                          setAbiMethods(getAbiMethods(abi));
-                        } catch {
-                          setAbiMethods([]);
-                        }
-                      }}
-                      placeholder="Paste contract ABI JSON here"
-                      rows={4}
-                    />
-                  </fieldset>
-                  {abiMethods.length > 0 && (
-                    <fieldset className="fieldset">
-                      <legend className="fieldset-legend">Method</legend>
-                      <select
-                        className="select select-bordered w-full"
-                        value={selectedMethod}
-                        onChange={(e) =>
-                          handleAbiMethodSelect(
-                            abiJson,
-                            e.target.value,
-                            setSelectedMethod,
-                            setMethodInputs,
-                            setInputValues,
-                          )
-                        }
-                      >
-                        <option value="">Select method</option>
-                        {abiMethods.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </select>
-                    </fieldset>
-                  )}
-                  {methodInputs.length > 0 && (
-                    <fieldset className="fieldset">
-                      <legend className="fieldset-legend">
-                        Method Parameters
-                      </legend>
-                      <div className="flex flex-col gap-2">
-                        {methodInputs.map((input) => (
-                          <input
-                            key={input.name}
-                            type="text"
-                            className="input input-bordered w-full"
-                            placeholder={`${input.name} (${input.type})`}
-                            value={inputValues[input.name] ?? ""}
-                            onChange={(e) =>
-                              setInputValues((vals) => ({
-                                ...vals,
-                                [input.name]: e.target.value,
-                              }))
-                            }
-                            autoComplete="off"
-                          />
-                        ))}
-                      </div>
-                    </fieldset>
-                  )}
-                </>
               )}
+              {methodInputs.length > 0 && (
+                <fieldset className="fieldset">
+                  <legend className="fieldset-legend">Method Parameters</legend>
+                  <div className="flex flex-col gap-2">
+                    {methodInputs.map((input) => (
+                      <input
+                        key={input.name}
+                        type="text"
+                        className="input input-bordered w-full"
+                        placeholder={`${input.name} (${input.type})`}
+                        value={inputValues[input.name] ?? ""}
+                        onChange={(e) =>
+                          setInputValues((vals) => ({
+                            ...vals,
+                            [input.name]: e.target.value,
+                          }))
+                        }
+                        autoComplete="off"
+                      />
+                    ))}
+                  </div>
+                </fieldset>
+              )}{" "}
+              <fieldset className="fieldset">
+                <legend className="fieldset-legend">Data (hex)</legend>
+                <label className="label cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showDataHex}
+                    onChange={() => setShowDataHex((v) => !v)}
+                    className="toggle toggle-xs"
+                  />
+                  <span className="ml-2">Show Data Hex</span>
+                </label>
+                {showDataHex && (
+                  <>
+                    <textarea
+                      className="textarea textarea-bordered mt-2 w-full"
+                      value={data}
+                      onChange={(e) => setData(e.target.value)}
+                      placeholder="0x..."
+                      autoComplete="off"
+                    />
+                  </>
+                )}
+              </fieldset>
               {error && (
                 <div className="alert alert-error text-sm whitespace-pre-wrap">
                   {error}
                 </div>
               )}
               <button type="submit" className="btn btn-primary">
-                Build Transaction
+                Add Transaction
               </button>
             </form>
           </AppCard>
         </div>
-        {/* Transaction Preview */}
+        {/* Transactions List & Build (right) */}
         <div className="w-full md:w-1/2">
-          <AppCard title="Transaction Preview">
-            <div className="flex flex-col gap-2">
-              <div>
-                <p className="mb-2 text-lg font-medium">To Address:</p>
-                <span className="badge badge-info badge-outline text-base font-bold">
-                  {preview.to || "-"}
-                </span>
-              </div>
-              <div className="divider my-0" />
-              <div>
-                <p className="mb-2 text-lg font-medium">Value (wei):</p>
-                <span className="badge badge-accent badge-outline text-base font-bold">
-                  {preview.value || "0"}
-                </span>
-              </div>
-              <div className="divider my-0" />
-              {useAbi && (
-                <>
-                  <div>
-                    <p className="mb-2 text-lg font-medium">Method:</p>
-                    <span className="badge badge-outline text-base-content">
-                      {preview.method || "-"}
-                    </span>
-                  </div>
-                  <div className="divider my-0" />
-                  <div>
-                    <p className="mb-2 text-lg font-medium">Parameters:</p>
-                    {preview.params && preview.params.length > 0 ? (
-                      <div className="flex flex-col gap-1">
-                        {preview.params.map((param, idx) => (
-                          <span key={idx} className="badge badge-outline">
-                            {param.name}:{" "}
-                            <span className="font-mono">{param.value}</span>{" "}
-                            <span className="text-xs">({param.type})</span>
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="badge badge-outline">No parameters</span>
-                    )}
-                  </div>
-                  <div className="divider my-0" />
-                </>
-              )}
-              <div>
-                <p className="mb-2 text-lg font-medium">Data (hex):</p>
-                <span className="badge badge-outline font-mono text-xs break-all">
-                  {preview.data || "-"}
-                </span>
-              </div>
+          <AppCard title="Transactions List">
+            <div className="overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Recipient</th>
+                    <th>Method</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="text-center text-sm text-gray-400"
+                      >
+                        No transactions added
+                      </td>
+                    </tr>
+                  ) : (
+                    transactions.map((tx, idx) => (
+                      <tr key={idx}>
+                        <td>{idx + 1}</td>
+                        <td className="font-mono text-xs break-all">
+                          {tx.to.length === 42
+                            ? `${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`
+                            : tx.to}
+                        </td>
+                        <td>{tx.method}</td>
+                        <td>
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => handleRemoveTransaction(idx)}
+                            type="button"
+                            aria-label="Remove transaction"
+                          >
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
+            <button
+              className="btn btn-primary mt-4"
+              type="button"
+              onClick={handleBuildSafeTransaction}
+              disabled={transactions.length === 0}
+            >
+              Build Safe Transaction
+            </button>
           </AppCard>
         </div>
       </div>
