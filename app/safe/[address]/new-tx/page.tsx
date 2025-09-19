@@ -4,6 +4,8 @@ import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 import { useState } from "react";
 import React from "react";
+import useSafe from "@/app/hooks/useSafe";
+import { useParams, useRouter } from "next/navigation";
 
 type AbiFunctionItem = {
   type: string;
@@ -44,17 +46,22 @@ function handleAbiMethodSelect(
   }
 }
 
-// Utility function to parse ABI methods from JSON string
 function parseAbiMethodsFromJson(json: string): string[] {
   try {
     const abi = JSON.parse(json);
     return getAbiMethods(abi);
-  } catch (err) {
+  } catch {
     return [];
   }
 }
 
-export default function TxBuildPage() {
+export default function NewTxPage() {
+  // Hooks
+  const { address: safeAddress } = useParams();
+  const router = useRouter();
+  const { buildSafeTransaction, getSafeTransactionHash, isOwner } = useSafe(
+    safeAddress as `0x${string}`,
+  );
   // Form state
   const [to, setTo] = useState("");
   const [value, setValue] = useState("");
@@ -67,7 +74,6 @@ export default function TxBuildPage() {
   const [methodInputs, setMethodInputs] = useState<
     { name: string; type: string }[]
   >([]);
-
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   // Transactions array state
   const [transactions, setTransactions] = useState<
@@ -80,15 +86,29 @@ export default function TxBuildPage() {
     }[]
   >([]);
 
-  // Build Safe Transaction with ProtocolKit
+  // ProtocolKit integration: build Safe transaction
   async function handleBuildSafeTransaction() {
-    // TODO: Replace with actual ProtocolKit integration
-    // Example:
-    // const safeTransaction = await protocolKit.createTransaction({ transactions });
-    console.log("Building SafeTx with transactions:", transactions);
-    alert(
-      `SafeTx built with ${transactions.length} transaction(s). See console for details.`,
-    );
+    setError(null);
+    try {
+      // Map transactions to ProtocolKit's SafeTransactionData format
+      const txs = transactions.map((tx) => ({
+        to: tx.to,
+        value: tx.value,
+        data: tx.data,
+        operation: tx.operation ?? 0,
+      }));
+      // Build transaction using ProtocolKit
+      const safeTx = await buildSafeTransaction(txs);
+      if (!safeTx) {
+        setError("Invalid transaction");
+        return;
+      }
+      const hash = await getSafeTransactionHash(safeTx);
+      // Redirect to tx details page
+      router.push(`/safe/${safeAddress}/tx/${hash}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   function handleBuildTx(e: React.FormEvent) {
@@ -115,7 +135,7 @@ export default function TxBuildPage() {
       {
         to: toAddr,
         value,
-        data: dataHex,
+        data: dataHex || "0x",
         operation: 0, // Default to Call
         method: methodLabel,
       },
@@ -182,7 +202,7 @@ export default function TxBuildPage() {
                   rows={4}
                 />
               </fieldset>
-              {abiMethods.length > 0 && (
+              {abiMethods.length > 0 && !showDataHex && (
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend">Method</legend>
                   <select
@@ -313,11 +333,19 @@ export default function TxBuildPage() {
                 </tbody>
               </table>
             </div>
+            {!isOwner && (
+              <div className="alert alert-warning mb-2 text-sm">
+                Only Safe owners can build and submit transactions.
+              </div>
+            )}
             <button
               className="btn btn-primary mt-4"
               type="button"
               onClick={handleBuildSafeTransaction}
-              disabled={transactions.length === 0}
+              disabled={transactions.length === 0 || !isOwner}
+              title={
+                !isOwner ? "Only Safe owners can build transactions" : undefined
+              }
             >
               Build Safe Transaction
             </button>

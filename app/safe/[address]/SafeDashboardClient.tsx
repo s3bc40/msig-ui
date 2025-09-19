@@ -10,6 +10,7 @@ import {
   STEPS_DEPLOY_LABEL,
 } from "@/app/utils/constants";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { SafeDeployStep } from "@/app/utils/types";
@@ -29,11 +30,11 @@ export default function SafeDashboardClient({
     isOwner,
     readOnly,
     unavailable,
-    buildTransaction,
-    signTransaction,
-    broadcastTransaction,
     deployUndeployedSafe,
+    getTransaction,
+    getSignatures,
   } = useSafe(safeAddress);
+  const router = useRouter();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
@@ -89,32 +90,15 @@ export default function SafeDashboardClient({
     );
   }
 
-  // Example: Dummy tx data for demonstration
-  const dummyTx = {
-    to: safeAddress,
-    value: BigInt(0),
-    data: "0x" as `0x${string}`,
-  };
+  // Handler to go to builder page
+  function handleGoToBuilder() {
+    router.push(`/safe/${safeAddress}/new-tx`);
+  }
 
-  // Handlers for actions (replace with real logic)
-  const handleBuildTx = async () => {
-    try {
-      await buildTransaction(dummyTx);
-      // Show modal or toast for success
-    } catch {
-      // Show error
-    }
-  };
-  const handleSignTx = async () => {
-    try {
-      await signTransaction({});
-    } catch {}
-  };
-  const handleBroadcastTx = async () => {
-    try {
-      await broadcastTransaction({});
-    } catch {}
-  };
+  // Example: List recent transactions (from context/localStorage)
+  // Replace with actual logic to list all tx hashes for this Safe
+  // For demo, just show one recent tx if available
+  const recentTxHash = null; // TODO: Replace with logic to get latest tx hash for this Safe
 
   return (
     <AppSection>
@@ -211,22 +195,30 @@ export default function SafeDashboardClient({
                 <>
                   <button
                     className="btn btn-outline btn-primary"
-                    onClick={handleBuildTx}
+                    onClick={handleGoToBuilder}
                   >
-                    Build Transaction
+                    Go to Builder
                   </button>
-                  <button
-                    className="btn btn-outline btn-secondary"
-                    onClick={handleSignTx}
-                  >
-                    Sign Transaction
-                  </button>
-                  <button
-                    className="btn btn-outline btn-success"
-                    onClick={handleBroadcastTx}
-                  >
-                    Broadcast Transaction
-                  </button>
+                  {recentTxHash && (
+                    <>
+                      <button
+                        className="btn btn-outline btn-secondary"
+                        onClick={() =>
+                          router.push(`/safe/${safeAddress}/tx/${recentTxHash}`)
+                        }
+                      >
+                        Sign Transaction
+                      </button>
+                      <button
+                        className="btn btn-outline btn-success"
+                        onClick={() =>
+                          router.push(`/safe/${safeAddress}/tx/${recentTxHash}`)
+                        }
+                      >
+                        Broadcast Transaction
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             {safeInfo &&
