@@ -9,11 +9,13 @@ import {
   DEFAULT_DEPLOY_STEPS,
   STEPS_DEPLOY_LABEL,
 } from "@/app/utils/constants";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { SafeDeployStep } from "@/app/utils/types";
+import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import Link from "next/link";
 
 export default function SafeDashboardClient({
   safeAddress,
@@ -30,9 +32,9 @@ export default function SafeDashboardClient({
     isOwner,
     readOnly,
     unavailable,
+    kit,
     deployUndeployedSafe,
-    getTransaction,
-    getSignatures,
+    getSafeTransactionCurrent,
   } = useSafe(safeAddress);
   const router = useRouter();
 
@@ -42,6 +44,32 @@ export default function SafeDashboardClient({
     useState<SafeDeployStep[]>(DEFAULT_DEPLOY_STEPS);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
+  const [currentTx, setCurrentTx] = useState<EthSafeTransaction | null>(null);
+  const [currentTxHash, setCurrentTxHash] = useState<string | null>(null);
+  // Fetch current transaction if any
+  useEffect(() => {
+    if (!kit || isLoading) return; // Wait for kit to be ready
+    let cancelled = false;
+    async function fetchTx() {
+      try {
+        const tx = await getSafeTransactionCurrent();
+        const txHash = await kit?.getTransactionHash(tx as EthSafeTransaction);
+        if (!cancelled) {
+          setCurrentTx(tx);
+          setCurrentTxHash(txHash || null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentTx(null);
+          setCurrentTxHash(null);
+        }
+      }
+    }
+    fetchTx();
+    return () => {
+      cancelled = true;
+    };
+  }, [getSafeTransactionCurrent, kit, isLoading]);
 
   // Handler for deploying undeployed Safe
   async function handleDeployUndeployedSafe() {
@@ -95,11 +123,6 @@ export default function SafeDashboardClient({
     router.push(`/safe/${safeAddress}/new-tx`);
   }
 
-  // Example: List recent transactions (from context/localStorage)
-  // Replace with actual logic to list all tx hashes for this Safe
-  // For demo, just show one recent tx if available
-  const recentTxHash = null; // TODO: Replace with logic to get latest tx hash for this Safe
-
   return (
     <AppSection>
       {/* Stat row for key Safe data */}
@@ -127,8 +150,12 @@ export default function SafeDashboardClient({
         </div>
       </div>
       <div className="divider">{safeName ? `${safeName}` : "Safe Details"}</div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <AppCard title="Safe Info">
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 md:grid-rows-2">
+        {/* Safe Info fills left column, spans two rows */}
+        <AppCard
+          title="Safe Info"
+          className="md:col-start-1 md:row-span-2 md:row-start-1"
+        >
           <div className="mb-2">
             <span className="font-semibold">Address:</span>
             <AppAddress address={safeAddress} className="ml-2" />
@@ -152,7 +179,8 @@ export default function SafeDashboardClient({
             <span className="ml-2">{safeInfo?.version ?? "-"}</span>
           </div>
         </AppCard>
-        <AppCard title="Actions">
+        {/* Actions in top right cell */}
+        <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
           <div className="flex flex-col gap-2">
             {/* Status and actions logic */}
             {isLoading && (
@@ -199,26 +227,6 @@ export default function SafeDashboardClient({
                   >
                     Go to Builder
                   </button>
-                  {recentTxHash && (
-                    <>
-                      <button
-                        className="btn btn-outline btn-secondary"
-                        onClick={() =>
-                          router.push(`/safe/${safeAddress}/tx/${recentTxHash}`)
-                        }
-                      >
-                        Sign Transaction
-                      </button>
-                      <button
-                        className="btn btn-outline btn-success"
-                        onClick={() =>
-                          router.push(`/safe/${safeAddress}/tx/${recentTxHash}`)
-                        }
-                      >
-                        Broadcast Transaction
-                      </button>
-                    </>
-                  )}
                 </>
               )}
             {safeInfo &&
@@ -239,6 +247,23 @@ export default function SafeDashboardClient({
             )}
           </div>
         </AppCard>
+        {/* Current Transaction in bottom right cell */}
+        {currentTx && currentTxHash && (
+          <AppCard title="Current Transaction">
+            <Link
+              className="btn btn-accent btn-outline flex w-full items-center gap-4 rounded"
+              href={`/safe/${safeAddress}/tx/${currentTxHash}`}
+              title="View transaction details"
+            >
+              <span className="font-semibold">Tx Hash:</span>
+              <span className="max-w-[30%] truncate" title={currentTxHash}>
+                {currentTxHash}
+              </span>
+              <span className="font-semibold">Signatures:</span>
+              <span>{currentTx.signatures?.size ?? 0}</span>
+            </Link>
+          </AppCard>
+        )}
       </div>
       {/* Modal for deployment workflow */}
       <WorkflowModal

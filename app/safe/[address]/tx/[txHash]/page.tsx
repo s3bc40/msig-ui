@@ -6,22 +6,19 @@ import { useParams } from "next/navigation";
 import useSafe from "@/app/hooks/useSafe";
 import { useEffect, useState } from "react";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
-import { useAccount } from "wagmi";
+import { DataPreview } from "@/app/components/DataPreview";
+import BtnCancel from "@/app/components/BtnCancel";
 
 export default function TxDetailsPage() {
-  const { chainId } = useAccount();
   const params = useParams();
-  // Support both txHash and tx-hash param keys
-  const txHash = params.txHash;
   const safeAddress = params.address as `0x${string}`;
   const {
-    getSafeTransactionByHash,
+    getSafeTransactionCurrent,
     signSafeTransaction,
     broadcastSafeTransaction,
     isOwner,
     safeInfo,
   } = useSafe(safeAddress);
-  // Get chainId from addressBook or context
   const [safeTx, setSafeTx] = useState<EthSafeTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [broadcastResult, setBroadcastResult] = useState<unknown>(null);
@@ -29,21 +26,14 @@ export default function TxDetailsPage() {
 
   useEffect(() => {
     setError(null);
-    // Wait for kit and safeInfo to be ready before fetching tx
-    console.log("Effect triggered with:", { chainId, txHash, safeInfo });
-    if (!chainId || !txHash || !safeInfo) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     let cancelled = false;
     async function fetchTx() {
       try {
-        console.log("Fetching tx for hash:", txHash);
-        const tx = await getSafeTransactionByHash(txHash as string);
-        console.log("Fetched tx:", tx);
+        const tx = await getSafeTransactionCurrent();
+        console.log("Fetched SafeTransaction:", tx);
         if (!cancelled) setSafeTx(tx);
-        if (!tx) setError("Could not load transaction");
+        if (!tx && !cancelled) setError("Could not load transaction");
       } catch {
         if (!cancelled) setError("Could not load transaction");
       } finally {
@@ -54,7 +44,7 @@ export default function TxDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [getSafeTransactionByHash, txHash, chainId, safeInfo]);
+  }, [getSafeTransactionCurrent, safeInfo]);
 
   async function handleSign() {
     setError(null);
@@ -80,6 +70,9 @@ export default function TxDetailsPage() {
 
   return (
     <AppSection>
+      <div className="mb-4">
+        <BtnCancel href={`/safe/${safeAddress}`} label="Back to Safe" />
+      </div>
       <AppCard title="Safe Transaction">
         <div className="flex flex-col gap-4">
           {loading ? (
@@ -117,12 +110,7 @@ export default function TxDetailsPage() {
                 </div>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="font-semibold">Data</span>
-                  <span
-                    className="max-w-[60%] truncate"
-                    title={safeTx.data.data}
-                  >
-                    {safeTx.data.data}
-                  </span>
+                  <DataPreview value={safeTx.data.data} />
                 </div>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="font-semibold">Gas Price</span>

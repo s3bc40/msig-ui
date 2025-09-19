@@ -29,7 +29,8 @@ export default function useSafe(safeAddress: `0x${string}`) {
     saveTransaction,
     getTransaction,
     saveSignature,
-    getSignatures,
+    exportCurrentTx,
+    importTx,
   } = useSafeKitContext();
 
   // Get Safe name from addressBook for current chain
@@ -351,8 +352,8 @@ export default function useSafe(safeAddress: `0x${string}`) {
         const safeTx = await kit.createTransaction({
           transactions: txs,
         });
-        const txHash = await kit.getTransactionHash(safeTx);
-        saveTransaction(txHash, safeTx);
+        // txHash no longer needed
+        saveTransaction(safeTx);
         return safeTx;
       } catch (err) {
         console.error("Error building SafeTransaction:", err);
@@ -388,9 +389,9 @@ export default function useSafe(safeAddress: `0x${string}`) {
       const kit = kitRef.current;
       if (!kit) return null;
       const signedTx = await kit.signTransaction(safeTx);
-      const txHash = await kit.getTransactionHash(safeTx);
-      signedTx.signatures.forEach((sig) => saveSignature(txHash, sig));
-      saveTransaction(txHash, signedTx);
+      // txHash no longer needed
+      signedTx.signatures.forEach((sig) => saveSignature(sig));
+      saveTransaction(signedTx);
       return signedTx;
     },
     [saveSignature, saveTransaction],
@@ -406,30 +407,23 @@ export default function useSafe(safeAddress: `0x${string}`) {
     [],
   );
 
-  // Reconstruct SafeTransaction from provider data
-  const getSafeTransactionByHash = useCallback(
-    async (hash: string): Promise<EthSafeTransaction | null> => {
-      console.log("Getting SafeTransaction for hash:", hash);
-      console.log("Using safeAddress:", safeAddress, "chainId:", chainId);
+  // Reconstruct SafeTransaction from provider data (current only)
+  const getSafeTransactionCurrent =
+    useCallback(async (): Promise<EthSafeTransaction | null> => {
       const kit = kitRef.current;
+      console.log("Getting current SafeTransaction...");
       if (!kit) return null;
-      const stored = getTransaction(hash);
-      console.log("Stored tx:", stored);
+      console.log("Kit ref:", kit);
+      console.log("Stored transaction...");
+      const stored = getTransaction();
+      console.log("Stored transaction:", stored);
       if (!stored) return null;
       const safeTx = await kit.createTransaction({
         transactions: [stored.data],
       });
-      console.log("Reconstructed safeTx:", safeTx);
-      const sigs = getSignatures(hash);
-      sigs.forEach((sig) =>
-        safeTx.addSignature(
-          new EthSafeSignature(sig.signer, sig.data, sig.isContractSignature),
-        ),
-      );
+      console.log("Reconstructed SafeTransaction:", safeTx);
       return safeTx;
-    },
-    [getTransaction, getSignatures, safeAddress, chainId],
-  );
+    }, [getTransaction]);
 
   return {
     safeInfo,
@@ -444,11 +438,13 @@ export default function useSafe(safeAddress: `0x${string}`) {
     getSafeTransactionHash,
     signSafeTransaction,
     broadcastSafeTransaction,
-    getSafeTransactionByHash,
+    getSafeTransactionCurrent,
     deployUndeployedSafe,
     addSafe,
     contractNetworks,
     safeWalletData,
     kit: kitRef.current,
+    exportCurrentTx,
+    importTx,
   };
 }
