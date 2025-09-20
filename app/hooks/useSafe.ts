@@ -11,7 +11,6 @@ import {
 import { useSafeKitContext } from "../provider/SafeKitProvider";
 import Safe, {
   EthSafeTransaction,
-  EthSafeSignature,
   SafeConfig,
 } from "@safe-global/protocol-kit";
 import { MinimalEIP1193Provider, SafeDeployStep } from "../utils/types";
@@ -19,7 +18,7 @@ import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
 import { waitForTransactionReceipt } from "viem/actions";
 
 export default function useSafe(safeAddress: `0x${string}`) {
-  const { address: signer, chain, connector } = useAccount();
+  const { address: signer, chain, connector, isConnected } = useAccount();
 
   const { safeWalletData, contractNetworks, addSafe, removeSafe } =
     useSafeWalletContext();
@@ -28,7 +27,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
     setKit,
     saveTransaction,
     getTransaction,
-    saveSignature,
     exportCurrentTx,
     importTx,
   } = useSafeKitContext();
@@ -102,6 +100,15 @@ export default function useSafe(safeAddress: `0x${string}`) {
 
   // Effect 1: Fetch Safe info from blockchain or local context
   useEffect(() => {
+    if (!isConnected) {
+      setSafeInfo(null);
+      kitRef.current = null;
+      setIsOwner(false);
+      setReadOnly(true);
+      setUnavailable(false);
+      setIsLoading(false);
+      return;
+    }
     let cancelled = false;
     async function fetchSafeInfo() {
       setIsLoading(true);
@@ -211,6 +218,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
     getKit,
     setKit,
     connectSafe,
+    isConnected,
   ]);
 
   // Deploy an undeployed Safe using its config from SafeWalletData
@@ -389,12 +397,10 @@ export default function useSafe(safeAddress: `0x${string}`) {
       const kit = kitRef.current;
       if (!kit) return null;
       const signedTx = await kit.signTransaction(safeTx);
-      // txHash no longer needed
-      signedTx.signatures.forEach((sig) => saveSignature(sig));
       saveTransaction(signedTx);
       return signedTx;
     },
-    [saveSignature, saveTransaction],
+    [saveTransaction],
   );
 
   // Broadcast a SafeTransaction

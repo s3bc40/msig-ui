@@ -143,15 +143,12 @@ export default function AccountsPage() {
     return summary;
   }
 
-  // ...existing code...
-
   return (
     <AppSection className="mx-auto max-w-4xl">
       <AppCard>
-        {/* ...existing card content... */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Safe Accounts</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 md:flex-row">
             <Link href="/new-safe/create" className="btn btn-primary btn-sm">
               Create Safe
             </Link>

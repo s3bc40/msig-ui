@@ -2,34 +2,48 @@ import { useState } from "react";
 
 export function DataPreview({ value }: { value: string }) {
   const [showAll, setShowAll] = useState(false);
-  const MAX_LEN = 80;
+  const METHOD_SELECTOR_LEN = 10; // 4 bytes + 0x prefix
+  const PREVIEW_LEN = 80;
   if (!value) return <span className="text-gray-400">-</span>;
-  if (showAll || value.length <= MAX_LEN) {
+  // Show full value
+  if (showAll || value.length <= PREVIEW_LEN) {
     return (
-      <span className="max-w-[60%] break-words whitespace-pre-wrap">
-        {value}
-        {value.length > MAX_LEN && (
+      <div className="w-7/12">
+        <span className="break-words whitespace-pre-wrap">
+          <b aria-label="The first 4 bytes determine the contract method that is being called">
+            {value.slice(0, METHOD_SELECTOR_LEN)}
+          </b>
+          {value.slice(METHOD_SELECTOR_LEN)}
+        </span>
+        {value.length > PREVIEW_LEN && (
           <button
-            className="btn btn-xs btn-link ml-2"
+            className="btn btn-xs btn-link"
             type="button"
             onClick={() => setShowAll(false)}
           >
-            less
+            Hide
           </button>
         )}
-      </span>
+      </div>
     );
   }
+  // Truncated preview
   return (
-    <span className="max-w-[60%] truncate">
-      {value.slice(0, MAX_LEN)}...
+    <div className="w-7/12">
+      <span className="break-words whitespace-pre-wrap">
+        <b aria-label="The first 4 bytes determine the contract method that is being called">
+          {value.slice(0, METHOD_SELECTOR_LEN)}
+        </b>
+        {value.slice(METHOD_SELECTOR_LEN, PREVIEW_LEN)}
+        <span className="text-gray-400">…</span>
+      </span>
       <button
-        className="btn btn-xs btn-link ml-2"
+        className="btn btn-xs btn-link"
         type="button"
         onClick={() => setShowAll(true)}
       >
-        more
+        Show more
       </button>
-    </span>
+    </div>
   );
 }

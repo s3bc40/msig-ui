@@ -5,7 +5,9 @@ import AppCard from "@/app/components/AppCard";
 import { useState } from "react";
 import React from "react";
 import useSafe from "@/app/hooks/useSafe";
+import { useAccount } from "wagmi";
 import { useParams, useRouter } from "next/navigation";
+import BtnCancel from "@/app/components/BtnCancel";
 
 type AbiFunctionItem = {
   type: string;
@@ -55,7 +57,7 @@ function parseAbiMethodsFromJson(json: string): string[] {
   }
 }
 
-export default function NewTxPage() {
+export default function NewSafeTxPage() {
   // Hooks
   const { address: safeAddress } = useParams();
   const router = useRouter();
@@ -158,6 +160,9 @@ export default function NewTxPage() {
 
   return (
     <AppSection>
+      <div className="mb-4">
+        <BtnCancel href={`/safe/${safeAddress}`} label="Back to Safe" />
+      </div>
       <div className="flex w-full flex-col gap-4 self-center md:flex-row">
         {/* Builder Form (left) */}
         <div className="w-full md:w-1/2">
@@ -333,11 +338,6 @@ export default function NewTxPage() {
                 </tbody>
               </table>
             </div>
-            {!isOwner && (
-              <div className="alert alert-warning mb-2 text-sm">
-                Only Safe owners can build and submit transactions.
-              </div>
-            )}
             <button
               className="btn btn-primary mt-4"
               type="button"

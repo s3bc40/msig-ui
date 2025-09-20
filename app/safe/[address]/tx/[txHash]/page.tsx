@@ -5,11 +5,13 @@ import AppCard from "@/app/components/AppCard";
 import { useParams } from "next/navigation";
 import useSafe from "@/app/hooks/useSafe";
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { DataPreview } from "@/app/components/DataPreview";
 import BtnCancel from "@/app/components/BtnCancel";
 
 export default function TxDetailsPage() {
+  const toastRef = useRef<HTMLDivElement | null>(null);
   const params = useParams();
   const safeAddress = params.address as `0x${string}`;
   const {
@@ -21,6 +23,10 @@ export default function TxDetailsPage() {
   } = useSafe(safeAddress);
   const [safeTx, setSafeTx] = useState<EthSafeTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
   const [broadcastResult, setBroadcastResult] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +39,6 @@ export default function TxDetailsPage() {
         const tx = await getSafeTransactionCurrent();
         console.log("Fetched SafeTransaction:", tx);
         if (!cancelled) setSafeTx(tx);
-        if (!tx && !cancelled) setError("Could not load transaction");
       } catch {
         if (!cancelled) setError("Could not load transaction");
       } finally {
@@ -52,9 +57,13 @@ export default function TxDetailsPage() {
     try {
       const signedTx = await signSafeTransaction(safeTx);
       setSafeTx(signedTx);
-    } catch {
-      setError("Signing failed");
+      setToast({ type: "success", message: "Signature added!" });
+    } catch (e) {
+      console.error("Signing error:", e);
+      setToast({ type: "error", message: "Signing failed" });
     }
+    // Hide toast after 3 seconds
+    setTimeout(() => setToast(null), 3000);
   }
 
   async function handleBroadcast() {
@@ -63,9 +72,11 @@ export default function TxDetailsPage() {
     try {
       const result = await broadcastSafeTransaction(safeTx);
       setBroadcastResult(result);
+      setToast({ type: "success", message: "Broadcast successful!" });
     } catch {
-      setError("Broadcast failed");
+      setToast({ type: "error", message: "Broadcast failed" });
     }
+    setTimeout(() => setToast(null), 3000);
   }
 
   return (
@@ -82,7 +93,7 @@ export default function TxDetailsPage() {
           ) : safeTx ? (
             <>
               {/* Transaction details: simple flex column with DaisyUI dividers */}
-              <div className="bg-base-200 rounded-box divide-base-100 flex flex-col divide-y shadow-md">
+              <div className="bg-base-200 rounded-box divide-base-100 flex max-h-80 flex-col divide-y overflow-y-auto shadow-md">
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="font-semibold">To</span>
                   <span className="max-w-[60%] truncate" title={safeTx.data.to}>
@@ -103,10 +114,6 @@ export default function TxDetailsPage() {
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="font-semibold">Operation</span>
                   <span>{safeTx.data.operation}</span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="font-semibold">Signatures</span>
-                  <span>{safeTx.signatures?.size ?? 0}</span>
                 </div>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="font-semibold">Data</span>
@@ -141,6 +148,18 @@ export default function TxDetailsPage() {
                   >
                     {safeTx.data.refundReceiver}
                   </span>
+                </div>
+                <div className="flex flex-col gap-1 px-4 py-3">
+                  <span className="mb-1 font-semibold">Signatures</span>
+                  {safeTx.signatures && safeTx.signatures.size > 0 ? (
+                    [...safeTx.signatures.values()].map((sigObj, idx) => (
+                      <span key={idx} className="font-mono text-xs break-all">
+                        Signature {idx + 1}: {sigObj.data}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400">No signatures</span>
+                  )}
                 </div>
               </div>
               <button
@@ -180,7 +199,23 @@ export default function TxDetailsPage() {
           ) : (
             <div className="text-gray-400">Transaction not found.</div>
           )}
-          {error && <div className="alert alert-error">{error}</div>}
+          {/* DaisyUI toast notification */}
+          {toast && (
+            <div
+              ref={toastRef}
+              className={`toast toast-center z-50`}
+              style={{
+                position: "fixed",
+                left: 0,
+                right: 0,
+                top: "2rem",
+                margin: "auto",
+                width: "fit-content",
+              }}
+            >
+              <div className={`alert alert-${toast.type}`}>{toast.message}</div>
+            </div>
+          )}
         </div>
       </AppCard>
     </AppSection>
