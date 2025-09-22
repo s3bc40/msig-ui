@@ -5,7 +5,6 @@ import AppCard from "@/app/components/AppCard";
 import { useState } from "react";
 import React from "react";
 import useSafe from "@/app/hooks/useSafe";
-import { useAccount } from "wagmi";
 import { useParams, useRouter } from "next/navigation";
 import BtnCancel from "@/app/components/BtnCancel";
 

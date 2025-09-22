@@ -32,9 +32,6 @@ export default function AccountsPage() {
           (type === "undeployed" && isUndeployed) ||
           (type === "deployed" && !isUndeployed)
         ) {
-          if (isUndeployed) {
-            const config = undeployedSafes[chainId][safeAddress];
-          }
           if (!grouped[safeAddress]) grouped[safeAddress] = [];
           grouped[safeAddress].push({
             chainId,
@@ -220,11 +217,17 @@ export default function AccountsPage() {
       </AppCard>
       {/* Import/Export buttons below the card */}
       <div className="mt-6 flex justify-center gap-2">
-        <button className="btn btn-primary" onClick={handleExport}>
-          Export
+        <button
+          className="btn btn-primary btn-outline btn-sm"
+          onClick={handleExport}
+        >
+          Export Wallets
         </button>
-        <button className="btn btn-secondary" onClick={handleImportClick}>
-          Import
+        <button
+          className="btn btn-secondary btn-outline btn-sm"
+          onClick={handleImportClick}
+        >
+          Import Wallets
         </button>
         <input
           type="file"

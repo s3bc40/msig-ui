@@ -2,18 +2,21 @@
 
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import useSafe from "@/app/hooks/useSafe";
-import { useEffect, useState } from "react";
-import { useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
+import { useSafeKitContext } from "@/app/provider/SafeKitProvider";
 import { DataPreview } from "@/app/components/DataPreview";
 import BtnCancel from "@/app/components/BtnCancel";
+import { BroadcastModal } from "@/app/components/BroadcastModal";
+import { useAccount } from "wagmi";
 
 export default function TxDetailsPage() {
-  const toastRef = useRef<HTMLDivElement | null>(null);
+  const { chain } = useAccount();
   const params = useParams();
   const safeAddress = params.address as `0x${string}`;
+  const router = useRouter();
   const {
     getSafeTransactionCurrent,
     signSafeTransaction,
@@ -22,13 +25,20 @@ export default function TxDetailsPage() {
     hasSigned,
     safeInfo,
   } = useSafe(safeAddress);
+  const { removeTransaction } = useSafeKitContext();
+
+  const toastRef = useRef<HTMLDivElement | null>(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [broadcastHash, setBroadcastHash] = useState<string | null>(null);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
   const [safeTx, setSafeTx] = useState<EthSafeTransaction | null>(null);
   const [signing, setSigning] = useState(false);
   const [toast, setToast] = useState<{
     type: "success" | "error" | "info";
     message: string;
   } | null>(null);
-  const [broadcastResult, setBroadcastResult] = useState<unknown>(null);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,9 +90,21 @@ export default function TxDetailsPage() {
     if (!safeTx) return;
     try {
       const result = await broadcastSafeTransaction(safeTx);
-      setBroadcastResult(result);
+      let txHash = "";
+      if (result && typeof result === "object") {
+        txHash =
+          (result as { hash?: string; transactionHash?: string })?.hash ||
+          (result as { hash?: string; transactionHash?: string })
+            ?.transactionHash ||
+          "";
+      }
+      setBroadcastHash(txHash || null);
+      setBroadcastError(null);
+      setShowModal(true);
       setToast({ type: "success", message: "Broadcast successful!" });
-    } catch {
+    } catch (err) {
+      setBroadcastError(err instanceof Error ? err.message : String(err));
+      setShowModal(true);
       setToast({ type: "error", message: "Broadcast failed" });
     }
     setTimeout(() => setToast(null), 3000);
@@ -124,7 +146,7 @@ export default function TxDetailsPage() {
                   <span className="font-semibold">Operation</span>
                   <span>{safeTx.data.operation}</span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center justify-between px-4 py-3 text-right">
                   <span className="font-semibold">Data</span>
                   <DataPreview value={safeTx.data.data} />
                 </div>
@@ -171,49 +193,62 @@ export default function TxDetailsPage() {
                   )}
                 </div>
               </div>
-              <button
-                className="btn btn-success"
-                onClick={handleSign}
-                disabled={!isOwner || signing || hasSigned}
-                title={"Signing tx"}
-              >
-                {!isOwner ? (
-                  "Only Safe owners can sign"
-                ) : hasSigned ? (
-                  "Already Signed"
-                ) : signing ? (
-                  <div className="flex items-center">
-                    <span>Signing in progress</span>
-                    <span className="loading loading-dots loading-xs ml-2" />
-                  </div>
-                ) : (
-                  "Sign Transaction"
-                )}
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleBroadcast}
-                disabled={
-                  !(
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  className="btn btn-success"
+                  onClick={handleSign}
+                  disabled={!isOwner || signing || hasSigned}
+                  title={"Signing tx"}
+                >
+                  {!isOwner ? (
+                    "Only Safe owners can sign"
+                  ) : hasSigned ? (
+                    "Already Signed"
+                  ) : signing ? (
+                    <div className="flex items-center">
+                      <span>Signing in progress</span>
+                      <span className="loading loading-dots loading-xs ml-2" />
+                    </div>
+                  ) : (
+                    "Sign Transaction"
+                  )}
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleBroadcast}
+                  disabled={
+                    !(
+                      safeTx &&
+                      safeInfo &&
+                      safeTx.signatures?.size >= safeInfo.threshold
+                    )
+                  }
+                  title={
                     safeTx &&
                     safeInfo &&
-                    safeTx.signatures?.size >= safeInfo.threshold
-                  )
-                }
-                title={
-                  safeTx &&
-                  safeInfo &&
-                  safeTx.signatures?.size < safeInfo.threshold
-                    ? `Requires ${safeInfo.threshold} signatures to broadcast`
-                    : undefined
-                }
-              >
-                Broadcast Transaction
-              </button>
-              {broadcastResult && (
-                <div className="alert alert-info">
-                  Broadcasted: {JSON.stringify(broadcastResult)}
-                </div>
+                    safeTx.signatures?.size < safeInfo.threshold
+                      ? `Requires ${safeInfo.threshold} signatures to broadcast`
+                      : undefined
+                  }
+                >
+                  Broadcast Transaction
+                </button>
+              </div>
+              {/* BroadcastModal for broadcast feedback */}
+              {showModal && (
+                <BroadcastModal
+                  open={showModal}
+                  txHash={broadcastHash}
+                  error={broadcastError}
+                  blockExplorerUrl={chain?.blockExplorers?.default?.url}
+                  onClose={() => setShowModal(false)}
+                  onSuccess={() => {
+                    removeTransaction(safeAddress);
+                    setShowModal(false);
+                    router.push(`/safe/${safeAddress}`);
+                  }}
+                  successLabel="Back to Safe"
+                />
               )}
             </>
           ) : (

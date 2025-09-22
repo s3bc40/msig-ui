@@ -22,14 +22,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
 
   const { safeWalletData, contractNetworks, addSafe, removeSafe } =
     useSafeWalletContext();
-  const {
-    getKit,
-    setKit,
-    saveTransaction,
-    getTransaction,
-    exportCurrentTx,
-    importTx,
-  } = useSafeKitContext();
+  const { saveTransaction, getTransaction } = useSafeKitContext();
 
   // Get Safe name from addressBook for current chain
   const chainId = chain?.id ? String(chain.id) : undefined;
@@ -75,15 +68,9 @@ export default function useSafe(safeAddress: `0x${string}`) {
   // Helper to (re)connect and cache a SafeKit instance
   const connectSafe = useCallback(
     async (
-      chainId: string,
       safeAddress: `0x${string}`,
       provider: MinimalEIP1193Provider,
       signer: `0x${string}`,
-      setKitFn?: (
-        chainId: string,
-        safeAddress: `0x${string}`,
-        kit: Safe,
-      ) => void,
     ): Promise<Safe> => {
       const config: SafeConfig = createConnectionConfig(
         provider,
@@ -93,7 +80,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
       );
       let kit = await Safe.init(config);
       kit = await kit.connect(config);
-      if (setKitFn) setKitFn(chainId, safeAddress, kit);
       return kit;
     },
     [contractNetworks],
@@ -151,16 +137,12 @@ export default function useSafe(safeAddress: `0x${string}`) {
         try {
           const provider = await getMinimalEIP1193Provider(connector);
           if (!provider) throw new Error("No provider available");
-          let kit = getKit(chainId, safeAddress as `0x${string}`);
-          if (!kit) {
-            kit = await connectSafe(
-              chainId,
-              safeAddress as `0x${string}`,
-              provider,
-              signer as `0x${string}`,
-              setKit,
-            );
-          }
+          // Always reconnect kit with current signer and provider
+          const kit = await connectSafe(
+            safeAddress as `0x${string}`,
+            provider,
+            signer as `0x${string}`,
+          );
           kitRef.current = kit;
           const [owners, threshold, version, balance, nonce] =
             await Promise.all([
@@ -216,8 +198,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
     undeployedSafe,
     contractNetworks,
     connector,
-    getKit,
-    setKit,
     connectSafe,
     isConnected,
   ]);
@@ -362,14 +342,14 @@ export default function useSafe(safeAddress: `0x${string}`) {
           transactions: txs,
         });
         // txHash no longer needed
-        saveTransaction(safeTx);
+        saveTransaction(safeAddress, safeTx);
         return safeTx;
       } catch (err) {
         console.error("Error building SafeTransaction:", err);
         return null;
       }
     },
-    [saveTransaction],
+    [saveTransaction, safeAddress],
   );
 
   // Validate a SafeTransaction
@@ -399,21 +379,23 @@ export default function useSafe(safeAddress: `0x${string}`) {
         const kit = kitRef.current;
         if (!kit) return null;
         const signedTx = await kit.signTransaction(safeTx);
-        saveTransaction(signedTx);
+        saveTransaction(safeAddress, signedTx);
+        setHasSigned(true);
         return signedTx;
       } catch (err) {
         console.error("Error signing SafeTransaction:", err);
         return null;
       }
     },
-    [saveTransaction],
+    [saveTransaction, safeAddress],
   );
 
   // Broadcast a SafeTransaction
   const broadcastSafeTransaction = useCallback(
-    async (safeTx: EthSafeTransaction): Promise<unknown | null> => {
+    async (safeTx: EthSafeTransaction) => {
       const kit = kitRef.current;
       if (!kit) return null;
+      console.log("Broadcasting SafeTransaction:", safeTx);
       return kit.executeTransaction(safeTx);
     },
     [],
@@ -423,9 +405,8 @@ export default function useSafe(safeAddress: `0x${string}`) {
   const getSafeTransactionCurrent =
     useCallback(async (): Promise<EthSafeTransaction | null> => {
       const kit = kitRef.current;
-      console.log("Getting current SafeTransaction...");
       if (!kit) return null;
-      const safeTx = getTransaction();
+      const safeTx = getTransaction(safeAddress);
       if (!safeTx) return null;
       // Check if current owner has already signed
       let signed = false;
@@ -435,7 +416,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
       setHasSigned(signed);
       console.log("Reconstructed SafeTransaction:", safeTx);
       return safeTx;
-    }, [getTransaction, signer]);
+    }, [getTransaction, signer, safeAddress]);
 
   return {
     safeInfo,
@@ -457,7 +438,5 @@ export default function useSafe(safeAddress: `0x${string}`) {
     contractNetworks,
     safeWalletData,
     kit: kitRef.current,
-    exportCurrentTx,
-    importTx,
   };
 }

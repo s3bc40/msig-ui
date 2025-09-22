@@ -9,7 +9,8 @@ import {
   DEFAULT_DEPLOY_STEPS,
   STEPS_DEPLOY_LABEL,
 } from "@/app/utils/constants";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useSafeKitContext } from "@/app/provider/SafeKitProvider";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
@@ -22,8 +23,11 @@ export default function SafeDashboardClient({
 }: {
   safeAddress: `0x${string}`;
 }) {
+  // Preview type for import
+  type ImportTxPreview = EthSafeTransaction | { error: string } | null;
   // Try to get the name from addressBook for the current chain
   const { chain } = useAccount();
+  const router = useRouter();
   const {
     safeName,
     safeInfo,
@@ -36,7 +40,7 @@ export default function SafeDashboardClient({
     deployUndeployedSafe,
     getSafeTransactionCurrent,
   } = useSafe(safeAddress);
-  const router = useRouter();
+  const { exportTx, importTx } = useSafeKitContext();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,6 +50,12 @@ export default function SafeDashboardClient({
   const [deployTxHash, setDeployTxHash] = useState<string | null>(null);
   const [currentTx, setCurrentTx] = useState<EthSafeTransaction | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<string | null>(null);
+  // Import/export modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState<
+    ImportTxPreview | { error: string } | null
+  >(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // Fetch current transaction if any
   useEffect(() => {
     if (!kit || isLoading) return; // Wait for kit to be ready
@@ -182,6 +192,125 @@ export default function SafeDashboardClient({
         {/* Actions in top right cell */}
         <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
           <div className="flex flex-col gap-2">
+            {/* Transaction import/export buttons */}
+            <div className="mb-2 flex gap-2">
+              <button
+                className="btn btn-primary btn-outline btn-sm"
+                onClick={() => {
+                  if (!currentTx) return;
+                  try {
+                    const json = exportTx(safeAddress);
+                    const blob = new Blob([json], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `safe-tx.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    // Optionally show error toast
+                  }
+                }}
+                title="Export transaction JSON to file"
+                disabled={!currentTx}
+              >
+                Export Tx
+              </button>
+              <button
+                className="btn btn-secondary btn-outline btn-sm"
+                onClick={() => fileInputRef.current?.click()}
+                title="Import transaction JSON from file"
+              >
+                Import Tx
+              </button>
+              <input
+                type="file"
+                className="hidden"
+                ref={fileInputRef}
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (event: ProgressEvent<FileReader>) => {
+                    try {
+                      const result = event.target?.result;
+                      if (typeof result === "string") {
+                        const json = JSON.parse(result);
+                        setImportPreview(json);
+                      } else {
+                        setImportPreview({ error: "Invalid file content." });
+                      }
+                      setShowImportModal(true);
+                    } catch {
+                      setImportPreview({ error: "Invalid JSON file." });
+                      setShowImportModal(true);
+                    }
+                  };
+                  reader.readAsText(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+            {/* Import Modal with preview and confirmation */}
+            {showImportModal && (
+              <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black">
+                <div className="bg-base-100 w-full max-w-lg rounded p-6 shadow-lg">
+                  <h2 className="mb-2 text-lg font-bold">
+                    Import Transaction JSON
+                  </h2>
+                  <div className="alert alert-warning mb-4 text-sm">
+                    <span>
+                      <strong>Warning:</strong> This will replace your current
+                      transaction for this Safe. This action cannot be undone.
+                    </span>
+                  </div>
+                  <div className="bg-base-200 mb-4 w-full rounded border p-4 shadow">
+                    <pre className="max-h-[40vh] overflow-y-auto font-mono text-xs break-words whitespace-pre-wrap">
+                      {typeof importPreview === "object" &&
+                      importPreview !== null
+                        ? JSON.stringify(importPreview, null, 2)
+                        : "No valid transaction data."}
+                    </pre>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => setShowImportModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      disabled={
+                        typeof importPreview !== "object" ||
+                        importPreview === null ||
+                        "error" in importPreview
+                      }
+                      onClick={async () => {
+                        try {
+                          importTx(safeAddress, JSON.stringify(importPreview));
+                          setShowImportModal(false);
+                          setImportPreview(null);
+                          // Optionally reload tx
+                          const tx = await getSafeTransactionCurrent();
+                          setCurrentTx(tx);
+                          // Optionally update hash
+                          if (kit && tx) {
+                            const txHash = await kit.getTransactionHash(tx);
+                            setCurrentTxHash(txHash || null);
+                          }
+                        } catch {
+                          // Optionally show error toast
+                        }
+                      }}
+                    >
+                      Replace
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Status and actions logic */}
             {isLoading && (
               <div className="flex h-20 items-center justify-center">

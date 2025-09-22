@@ -1,5 +1,6 @@
 "use client";
-import Safe, {
+
+import {
   EthSafeSignature,
   EthSafeTransaction,
 } from "@safe-global/protocol-kit";
@@ -9,13 +10,11 @@ import React, { createContext, useContext, useEffect, useRef } from "react";
 export type SafeKitKey = `${string}:${string}`; // chainId:safeAddress
 
 export interface SafeKitContextType {
-  getKit: (chainId: string, safeAddress: string) => Safe | undefined;
-  setKit: (chainId: string, safeAddress: string, kit: Safe) => void;
-  saveTransaction: (txObj: EthSafeTransaction) => void;
-  getTransaction: () => EthSafeTransaction | null;
-  removeTransaction: () => void;
-  exportCurrentTx: () => string;
-  importTx: (json: string) => void;
+  saveTransaction: (safeAddress: string, txObj: EthSafeTransaction) => void;
+  getTransaction: (safeAddress: string) => EthSafeTransaction | null;
+  removeTransaction: (safeAddress: string) => void;
+  exportTx: (safeAddress: string) => string;
+  importTx: (safeAddress: string, json: string) => void;
 }
 
 const SafeKitContext = createContext<SafeKitContextType | undefined>(undefined);
@@ -23,94 +22,144 @@ const SafeKitContext = createContext<SafeKitContextType | undefined>(undefined);
 export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // Use a ref to persist cache across renders
-  const kitCache = useRef<Map<SafeKitKey, Safe>>(new Map());
-
-  // LocalStorage keys
-  const TX_STORAGE_KEY = "safeCurrentTx";
+  // LocalStorage key
+  const TX_STORAGE_KEY = "safeCurrentTxMap";
   // Removed SIG_STORAGE_KEY, signatures are stored in the transaction
 
-  // Single current transaction (in memory only)
-  const currentTxRef = useRef<EthSafeTransaction | null>(null);
+  // In-memory map of current transactions per safeAddress
+  const currentTxMapRef = useRef<{
+    [safeAddress: string]: EthSafeTransaction | null;
+  }>({});
 
-  // Hydrate from localStorage on mount
+  // Hydrate all transactions from localStorage on mount
+  type StoredTx = {
+    data: EthSafeTransaction["data"];
+    signatures?: EthSafeSignature[];
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const rawTx = localStorage.getItem(TX_STORAGE_KEY);
-      console.log("Hydrating current transaction from storage:", rawTx);
-      if (rawTx) {
-        const parsed = JSON.parse(rawTx);
-        // Rehydrate as EthSafeTransaction and add signatures
-        let txObj: EthSafeTransaction | null = null;
-        console.log("Parsed transaction data:", parsed);
-        if (parsed.data) {
-          txObj = new EthSafeTransaction(parsed.data);
-        }
-        if (txObj && parsed.signatures && Array.isArray(parsed.signatures)) {
-          parsed.signatures.forEach(
-            (sig: {
-              signer: string;
-              data: string;
-              isContractSignature: boolean;
-            }) => {
-              const ethSignature = new EthSafeSignature(
-                sig.signer,
-                sig.data,
-                sig.isContractSignature,
+      const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+      if (rawMap) {
+        const parsedMap: Record<string, StoredTx> = JSON.parse(rawMap);
+        Object.entries(parsedMap).forEach(([safeAddress, parsed]) => {
+          let txObj: EthSafeTransaction | null = null;
+          if (parsed && typeof parsed === "object" && "data" in parsed) {
+            txObj = new EthSafeTransaction(parsed.data);
+            if (parsed.signatures && Array.isArray(parsed.signatures)) {
+              parsed.signatures.forEach(
+                (sig: {
+                  signer: string;
+                  data: string;
+                  isContractSignature: boolean;
+                }) => {
+                  const ethSignature = new EthSafeSignature(
+                    sig.signer,
+                    sig.data,
+                    sig.isContractSignature,
+                  );
+                  txObj!.addSignature(ethSignature);
+                },
               );
-              txObj!.addSignature(ethSignature);
-            },
-          );
-        }
-        currentTxRef.current = txObj;
-        console.log("Hydrated current transaction:", currentTxRef.current);
+            }
+          }
+          currentTxMapRef.current[safeAddress] = txObj;
+        });
       }
     } catch {
       // Ignore hydration errors
     }
   }, []);
 
-  // Set the current transaction
-  function saveTransaction(txObj: EthSafeTransaction) {
-    // Serialize signatures as array of SafeSignature objects
+  // Set the transaction for a specific safeAddress
+  function saveTransaction(safeAddress: string, txObj: EthSafeTransaction) {
     const txToSave = {
       data: txObj.data,
       signatures: txObj.signatures ? Array.from(txObj.signatures.values()) : [],
     };
-    currentTxRef.current = txObj;
+    currentTxMapRef.current[safeAddress] = txObj;
     if (typeof window !== "undefined") {
-      localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(txToSave));
+      // Get full map, update, and save
+      let map: Record<string, StoredTx> = {};
+      const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+      if (rawMap) {
+        map = JSON.parse(rawMap);
+      }
+      map[safeAddress] = txToSave;
+      localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(map));
     }
   }
 
-  // Get the current transaction
-  function getTransaction(): EthSafeTransaction | null {
-    return currentTxRef.current;
+  // Get the transaction for a specific safeAddress
+  function getTransaction(safeAddress: string): EthSafeTransaction | null {
+    return currentTxMapRef.current[safeAddress] || null;
   }
 
-  // Remove the current transaction
-  function removeTransaction() {
-    currentTxRef.current = null;
+  // Remove the transaction for a specific safeAddress
+  function removeTransaction(safeAddress: string) {
+    currentTxMapRef.current[safeAddress] = null;
     if (typeof window !== "undefined") {
-      localStorage.removeItem(TX_STORAGE_KEY);
+      let map: Record<string, StoredTx> = {};
+      const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+      if (rawMap) {
+        map = JSON.parse(rawMap);
+      }
+      delete map[safeAddress];
+      localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(map));
     }
   }
 
-  // Export current transaction as JSON
-  function exportCurrentTx(): string {
-    if (!currentTxRef.current) return "";
-    return JSON.stringify({ tx: currentTxRef.current });
+  // Export transaction for a specific safeAddress as JSON
+  function exportTx(safeAddress: string): string {
+    const tx = currentTxMapRef.current[safeAddress];
+    if (!tx) return "";
+    // Serialize signatures to plain objects
+    const signatures = tx.signatures
+      ? Array.from(tx.signatures.values()).map((sig) => ({
+          signer: sig.signer,
+          data: sig.data,
+          isContractSignature: sig.isContractSignature,
+        }))
+      : [];
+    return JSON.stringify({ tx: { data: tx.data, signatures } });
   }
 
-  // Import transaction from JSON
-  function importTx(json: string) {
+  // Import transaction for a specific safeAddress from JSON
+  function importTx(safeAddress: string, json: string) {
     try {
       const obj = JSON.parse(json);
       if (obj.tx) {
-        currentTxRef.current = obj.tx;
+        // Expect obj.tx to be a StoredTx
+        let txObj: EthSafeTransaction | null = null;
+        if (obj.tx.data) {
+          txObj = new EthSafeTransaction(obj.tx.data);
+          if (obj.tx.signatures && Array.isArray(obj.tx.signatures)) {
+            obj.tx.signatures.forEach(
+              (sig: {
+                signer: string;
+                data: string;
+                isContractSignature: boolean;
+              }) => {
+                const ethSignature = new EthSafeSignature(
+                  sig.signer,
+                  sig.data,
+                  sig.isContractSignature,
+                );
+                txObj!.addSignature(ethSignature);
+              },
+            );
+          }
+        }
+        currentTxMapRef.current[safeAddress] = txObj;
         if (typeof window !== "undefined") {
-          localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(obj.tx));
+          let map: Record<string, StoredTx> = {};
+          const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+          if (rawMap) {
+            map = JSON.parse(rawMap);
+          }
+          map[safeAddress] = obj.tx;
+          localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(map));
         }
       }
     } catch {
@@ -118,26 +167,13 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }
 
-  // Kit instance management (unchanged)
-  const getKit = (chainId: string, safeAddress: string) => {
-    const key: SafeKitKey = `${chainId}:${safeAddress}`;
-    return kitCache.current.get(key);
-  };
-
-  const setKit = (chainId: string, safeAddress: string, kit: Safe) => {
-    const key: SafeKitKey = `${chainId}:${safeAddress}`;
-    kitCache.current.set(key, kit);
-  };
-
   return (
     <SafeKitContext.Provider
       value={{
-        getKit,
-        setKit,
         saveTransaction,
         getTransaction,
         removeTransaction,
-        exportCurrentTx,
+        exportTx,
         importTx,
       }}
     >
