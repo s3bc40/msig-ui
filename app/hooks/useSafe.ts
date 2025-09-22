@@ -55,6 +55,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [hasSigned, setHasSigned] = useState(false);
   const [readOnly, setReadOnly] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -394,11 +395,16 @@ export default function useSafe(safeAddress: `0x${string}`) {
   // Sign a SafeTransaction
   const signSafeTransaction = useCallback(
     async (safeTx: EthSafeTransaction): Promise<EthSafeTransaction | null> => {
-      const kit = kitRef.current;
-      if (!kit) return null;
-      const signedTx = await kit.signTransaction(safeTx);
-      saveTransaction(signedTx);
-      return signedTx;
+      try {
+        const kit = kitRef.current;
+        if (!kit) return null;
+        const signedTx = await kit.signTransaction(safeTx);
+        saveTransaction(signedTx);
+        return signedTx;
+      } catch (err) {
+        console.error("Error signing SafeTransaction:", err);
+        return null;
+      }
     },
     [saveTransaction],
   );
@@ -419,17 +425,17 @@ export default function useSafe(safeAddress: `0x${string}`) {
       const kit = kitRef.current;
       console.log("Getting current SafeTransaction...");
       if (!kit) return null;
-      console.log("Kit ref:", kit);
-      console.log("Stored transaction...");
-      const stored = getTransaction();
-      console.log("Stored transaction:", stored);
-      if (!stored) return null;
-      const safeTx = await kit.createTransaction({
-        transactions: [stored.data],
-      });
+      const safeTx = getTransaction();
+      if (!safeTx) return null;
+      // Check if current owner has already signed
+      let signed = false;
+      if (safeTx.signatures && signer) {
+        signed = safeTx.signatures.has(signer.toLowerCase());
+      }
+      setHasSigned(signed);
       console.log("Reconstructed SafeTransaction:", safeTx);
       return safeTx;
-    }, [getTransaction]);
+    }, [getTransaction, signer]);
 
   return {
     safeInfo,
@@ -437,6 +443,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
     isLoading,
     error,
     isOwner,
+    hasSigned,
     readOnly,
     unavailable,
     buildSafeTransaction,

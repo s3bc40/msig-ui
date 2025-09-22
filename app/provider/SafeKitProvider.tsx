@@ -1,27 +1,19 @@
 "use client";
-import Safe, { EthSafeTransaction } from "@safe-global/protocol-kit";
+import Safe, {
+  EthSafeSignature,
+  EthSafeTransaction,
+} from "@safe-global/protocol-kit";
 import React, { createContext, useContext, useEffect, useRef } from "react";
 
 // Type for cache key
 export type SafeKitKey = `${string}:${string}`; // chainId:safeAddress
 
-// Context type
-type StoredSafeTx = {
-  data: EthSafeTransaction["data"];
-  signatures: Array<{
-    signer: string;
-    data: string;
-    isContractSignature: boolean;
-  }>;
-};
-
 export interface SafeKitContextType {
   getKit: (chainId: string, safeAddress: string) => Safe | undefined;
   setKit: (chainId: string, safeAddress: string, kit: Safe) => void;
   saveTransaction: (txObj: EthSafeTransaction) => void;
-  getTransaction: () => StoredSafeTx | undefined;
+  getTransaction: () => EthSafeTransaction | null;
   removeTransaction: () => void;
-  listTransactions: (safeAddress: string) => StoredSafeTx[];
   exportCurrentTx: () => string;
   importTx: (json: string) => void;
 }
@@ -46,13 +38,32 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window === "undefined") return;
     try {
       const rawTx = localStorage.getItem(TX_STORAGE_KEY);
+      console.log("Hydrating current transaction from storage:", rawTx);
       if (rawTx) {
         const parsed = JSON.parse(rawTx);
-        // Rehydrate signatures array to Map
-        if (parsed.signatures && Array.isArray(parsed.signatures)) {
-          parsed.signatures = new Map(parsed.signatures);
+        // Rehydrate as EthSafeTransaction and add signatures
+        let txObj: EthSafeTransaction | null = null;
+        console.log("Parsed transaction data:", parsed);
+        if (parsed.data) {
+          txObj = new EthSafeTransaction(parsed.data);
         }
-        currentTxRef.current = parsed;
+        if (txObj && parsed.signatures && Array.isArray(parsed.signatures)) {
+          parsed.signatures.forEach(
+            (sig: {
+              signer: string;
+              data: string;
+              isContractSignature: boolean;
+            }) => {
+              const ethSignature = new EthSafeSignature(
+                sig.signer,
+                sig.data,
+                sig.isContractSignature,
+              );
+              txObj!.addSignature(ethSignature);
+            },
+          );
+        }
+        currentTxRef.current = txObj;
         console.log("Hydrated current transaction:", currentTxRef.current);
       }
     } catch {
@@ -62,12 +73,10 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Set the current transaction
   function saveTransaction(txObj: EthSafeTransaction) {
-    // Serialize signatures Map to array
+    // Serialize signatures as array of SafeSignature objects
     const txToSave = {
-      ...txObj,
-      signatures: txObj.signatures
-        ? Array.from(txObj.signatures.entries())
-        : [],
+      data: txObj.data,
+      signatures: txObj.signatures ? Array.from(txObj.signatures.values()) : [],
     };
     currentTxRef.current = txObj;
     if (typeof window !== "undefined") {
@@ -76,27 +85,8 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   // Get the current transaction
-  function getTransaction(): StoredSafeTx | undefined {
-    console.log("Getting current transaction:", currentTxRef.current);
-    if (!currentTxRef.current) return undefined;
-    console.log("Current transaction data:", currentTxRef.current.data);
-    let signatures: Array<{
-      signer: string;
-      data: string;
-      isContractSignature: boolean;
-    }> = [];
-    const sigs = currentTxRef.current.signatures;
-    if (sigs && sigs.size > 0) {
-      signatures = Array.from(sigs.values()).map((sig) => ({
-        signer: sig.signer,
-        data: sig.data,
-        isContractSignature: sig.isContractSignature,
-      }));
-    }
-    return {
-      data: currentTxRef.current.data,
-      signatures,
-    };
+  function getTransaction(): EthSafeTransaction | null {
+    return currentTxRef.current;
   }
 
   // Remove the current transaction
@@ -105,13 +95,6 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window !== "undefined") {
       localStorage.removeItem(TX_STORAGE_KEY);
     }
-  }
-
-  // List transactions for a Safe address (always one or zero)
-  function listTransactions(safeAddress: string): StoredSafeTx[] {
-    const tx = getTransaction();
-    if (tx && tx.data?.to === safeAddress) return [tx];
-    return [];
   }
 
   // Export current transaction as JSON
@@ -154,7 +137,6 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
         saveTransaction,
         getTransaction,
         removeTransaction,
-        listTransactions,
         exportCurrentTx,
         importTx,
       }}

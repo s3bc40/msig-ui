@@ -19,10 +19,11 @@ export default function TxDetailsPage() {
     signSafeTransaction,
     broadcastSafeTransaction,
     isOwner,
+    hasSigned,
     safeInfo,
   } = useSafe(safeAddress);
   const [safeTx, setSafeTx] = useState<EthSafeTransaction | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
   const [toast, setToast] = useState<{
     type: "success" | "error" | "info";
     message: string;
@@ -31,7 +32,6 @@ export default function TxDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setError(null);
     setLoading(true);
     let cancelled = false;
     async function fetchTx() {
@@ -40,7 +40,10 @@ export default function TxDetailsPage() {
         console.log("Fetched SafeTransaction:", tx);
         if (!cancelled) setSafeTx(tx);
       } catch {
-        if (!cancelled) setError("Could not load transaction");
+        if (!cancelled) {
+          setToast({ type: "error", message: "Could not load transaction" });
+          setTimeout(() => setToast(null), 3000);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,22 +55,28 @@ export default function TxDetailsPage() {
   }, [getSafeTransactionCurrent, safeInfo]);
 
   async function handleSign() {
-    setError(null);
-    if (!safeTx) return;
+    setSigning(true);
+    if (!safeTx) {
+      setSigning(false);
+      return;
+    }
     try {
       const signedTx = await signSafeTransaction(safeTx);
-      setSafeTx(signedTx);
-      setToast({ type: "success", message: "Signature added!" });
+      if (!signedTx) {
+        setToast({ type: "error", message: "Signing failed" });
+      } else {
+        setToast({ type: "success", message: "Signature added!" });
+        setSafeTx(signedTx);
+      }
     } catch (e) {
       console.error("Signing error:", e);
       setToast({ type: "error", message: "Signing failed" });
     }
-    // Hide toast after 3 seconds
+    setSigning(false);
     setTimeout(() => setToast(null), 3000);
   }
 
   async function handleBroadcast() {
-    setError(null);
     if (!safeTx) return;
     try {
       const result = await broadcastSafeTransaction(safeTx);
@@ -154,7 +163,7 @@ export default function TxDetailsPage() {
                   {safeTx.signatures && safeTx.signatures.size > 0 ? (
                     [...safeTx.signatures.values()].map((sigObj, idx) => (
                       <span key={idx} className="font-mono text-xs break-all">
-                        Signature {idx + 1}: {sigObj.data}
+                        Sig {idx + 1}: {sigObj.data}
                       </span>
                     ))
                   ) : (
@@ -165,10 +174,21 @@ export default function TxDetailsPage() {
               <button
                 className="btn btn-success"
                 onClick={handleSign}
-                disabled={!isOwner}
-                title={!isOwner ? "Only Safe owners can sign" : undefined}
+                disabled={!isOwner || signing || hasSigned}
+                title={"Signing tx"}
               >
-                Sign Transaction
+                {!isOwner ? (
+                  "Only Safe owners can sign"
+                ) : hasSigned ? (
+                  "Already Signed"
+                ) : signing ? (
+                  <div className="flex items-center">
+                    <span>Signing in progress</span>
+                    <span className="loading loading-dots loading-xs ml-2" />
+                  </div>
+                ) : (
+                  "Sign Transaction"
+                )}
               </button>
               <button
                 className="btn btn-primary"
