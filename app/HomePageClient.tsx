@@ -24,6 +24,7 @@ export default function HomePageClient() {
             <Link
               href="/accounts"
               className="btn btn-primary btn-soft w-full rounded py-4 text-lg"
+              data-testid="continue-with-account"
             >
               Continue with {address?.slice(0, 6) + "..." + address?.slice(-4)}
             </Link>
