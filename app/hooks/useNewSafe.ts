@@ -88,7 +88,6 @@ export default function useNewSafe() {
         let deploymentTx, kitClient, txHash;
         try {
           deploymentTx = await kit.createSafeDeploymentTransaction();
-          console.log("Creating deployment transaction...");
           kitClient = await kit.getSafeProvider().getExternalSigner();
           steps[0].status = "success";
           steps[1].status = "running";

@@ -5,11 +5,9 @@ import {
   EthSafeTransaction,
 } from "@safe-global/protocol-kit";
 import React, { createContext, useContext, useEffect, useRef } from "react";
+import { SAFE_TX_STORAGE_KEY } from "../utils/constants";
 
-// Type for cache key
-export type SafeKitKey = `${string}:${string}`; // chainId:safeAddress
-
-export interface SafeKitContextType {
+export interface SafeTxContextType {
   saveTransaction: (safeAddress: string, txObj: EthSafeTransaction) => void;
   getTransaction: (safeAddress: string) => EthSafeTransaction | null;
   removeTransaction: (safeAddress: string) => void;
@@ -17,15 +15,11 @@ export interface SafeKitContextType {
   importTx: (safeAddress: string, json: string) => void;
 }
 
-const SafeKitContext = createContext<SafeKitContextType | undefined>(undefined);
+const SafeTxContext = createContext<SafeTxContextType | undefined>(undefined);
 
-export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
+export const SafeTxProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // LocalStorage key
-  const TX_STORAGE_KEY = "safeCurrentTxMap";
-  // Removed SIG_STORAGE_KEY, signatures are stored in the transaction
-
   // In-memory map of current transactions per safeAddress
   const currentTxMapRef = useRef<{
     [safeAddress: string]: EthSafeTransaction | null;
@@ -40,7 +34,7 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+      const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
       if (rawMap) {
         const parsedMap: Record<string, StoredTx> = JSON.parse(rawMap);
         Object.entries(parsedMap).forEach(([safeAddress, parsed]) => {
@@ -82,12 +76,12 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window !== "undefined") {
       // Get full map, update, and save
       let map: Record<string, StoredTx> = {};
-      const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+      const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
       if (rawMap) {
         map = JSON.parse(rawMap);
       }
       map[safeAddress] = txToSave;
-      localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(map));
+      localStorage.setItem(SAFE_TX_STORAGE_KEY, JSON.stringify(map));
     }
   }
 
@@ -101,12 +95,12 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
     currentTxMapRef.current[safeAddress] = null;
     if (typeof window !== "undefined") {
       let map: Record<string, StoredTx> = {};
-      const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+      const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
       if (rawMap) {
         map = JSON.parse(rawMap);
       }
       delete map[safeAddress];
-      localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(map));
+      localStorage.setItem(SAFE_TX_STORAGE_KEY, JSON.stringify(map));
     }
   }
 
@@ -154,12 +148,12 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
         currentTxMapRef.current[safeAddress] = txObj;
         if (typeof window !== "undefined") {
           let map: Record<string, StoredTx> = {};
-          const rawMap = localStorage.getItem(TX_STORAGE_KEY);
+          const rawMap = localStorage.getItem(SAFE_TX_STORAGE_KEY);
           if (rawMap) {
             map = JSON.parse(rawMap);
           }
           map[safeAddress] = obj.tx;
-          localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(map));
+          localStorage.setItem(SAFE_TX_STORAGE_KEY, JSON.stringify(map));
         }
       }
     } catch {
@@ -168,7 +162,7 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   return (
-    <SafeKitContext.Provider
+    <SafeTxContext.Provider
       value={{
         saveTransaction,
         getTransaction,
@@ -178,13 +172,13 @@ export const SafeKitProvider: React.FC<{ children: React.ReactNode }> = ({
       }}
     >
       {children}
-    </SafeKitContext.Provider>
+    </SafeTxContext.Provider>
   );
 };
 
-export function useSafeKitContext() {
-  const ctx = useContext(SafeKitContext);
+export function useSafeTxContext() {
+  const ctx = useContext(SafeTxContext);
   if (!ctx)
-    throw new Error("useSafeKitContext must be used within a SafeKitProvider");
+    throw new Error("useSafeTxContext must be used within a SafeTxProvider");
   return ctx;
 }

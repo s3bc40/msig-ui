@@ -15,7 +15,7 @@ export interface WorkflowModalProps {
   successLabel?: string;
 }
 
-const WorkflowModal: React.FC<WorkflowModalProps> = ({
+export default function DeploymentModal({
   open,
   steps,
   stepLabels,
@@ -26,7 +26,7 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
   closeLabel = "Close",
   onSuccess,
   successLabel,
-}) => {
+}: WorkflowModalProps) {
   if (!open) return null;
   return (
     <dialog
@@ -100,6 +100,4 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({
       </div>
     </dialog>
   );
-};
-
-export { WorkflowModal };
+}

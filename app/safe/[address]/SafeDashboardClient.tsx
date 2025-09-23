@@ -4,27 +4,25 @@ import AppAddress from "@/app/components/AppAddress";
 import AppCard from "@/app/components/AppCard";
 import AppSection from "@/app/components/AppSection";
 import useSafe from "@/app/hooks/useSafe";
-import { WorkflowModal } from "@/app/components/WorkflowModal";
 import {
   DEFAULT_DEPLOY_STEPS,
   STEPS_DEPLOY_LABEL,
 } from "@/app/utils/constants";
 import React, { useEffect, useState, useRef } from "react";
-import { useSafeKitContext } from "@/app/provider/SafeKitProvider";
+import { useSafeTxContext } from "@/app/provider/SafeTxProvider";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
-import { SafeDeployStep } from "@/app/utils/types";
+import { ImportTxPreview, SafeDeployStep } from "@/app/utils/types";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import Link from "next/link";
+import DeploymentModal from "@/app/components/DeploymentModal";
 
 export default function SafeDashboardClient({
   safeAddress,
 }: {
   safeAddress: `0x${string}`;
 }) {
-  // Preview type for import
-  type ImportTxPreview = EthSafeTransaction | { error: string } | null;
   // Try to get the name from addressBook for the current chain
   const { chain } = useAccount();
   const router = useRouter();
@@ -40,7 +38,7 @@ export default function SafeDashboardClient({
     deployUndeployedSafe,
     getSafeTransactionCurrent,
   } = useSafe(safeAddress);
-  const { exportTx, importTx } = useSafeKitContext();
+  const { exportTx, importTx } = useSafeTxContext();
 
   // Modal state for deployment
   const [modalOpen, setModalOpen] = useState(false);
@@ -395,7 +393,7 @@ export default function SafeDashboardClient({
         )}
       </div>
       {/* Modal for deployment workflow */}
-      <WorkflowModal
+      <DeploymentModal
         open={modalOpen}
         steps={deploySteps}
         stepLabels={STEPS_DEPLOY_LABEL}

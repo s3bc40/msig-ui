@@ -10,7 +10,7 @@ export interface ModalProps {
   closeLabel?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({
+export default function Modal({
   open,
   onClose,
   children,
@@ -18,7 +18,7 @@ const Modal: React.FC<ModalProps> = ({
   boxClassName = "modal-box flex flex-col gap-6 p-8",
   showCloseButton = true,
   closeLabel = "Close",
-}) => {
+}: ModalProps) {
   if (!open) return null;
   return (
     <dialog className={className} open>
@@ -38,6 +38,4 @@ const Modal: React.FC<ModalProps> = ({
       </div>
     </dialog>
   );
-};
-
-export { Modal };
+}

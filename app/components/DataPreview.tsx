@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function DataPreview({ value }: { value: string }) {
+export default function DataPreview({ value }: { value: string }) {
   const [showAll, setShowAll] = useState(false);
   const METHOD_SELECTOR_LEN = 10; // 4 bytes + 0x prefix
   const PREVIEW_LEN = 80;

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 
 // Helper to summarize SafeWalletData for preview
-import { Modal } from "@/app/components/Modal";
+import Modal from "@/app/components/Modal";
 import Link from "next/link";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";

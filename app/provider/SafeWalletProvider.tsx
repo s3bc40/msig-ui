@@ -15,7 +15,10 @@ import type { SafeWalletData, UndeployedSafe } from "../utils/types";
 import { buildContractNetworks } from "../utils/contractNetworks";
 import type { ContractNetworks } from "../utils/contractNetworks";
 import { useChains } from "wagmi";
-import { DEFAULT_SAFE_WALLET_DATA } from "../utils/constants";
+import {
+  DEFAULT_SAFE_WALLET_DATA,
+  SAFE_WALLET_DATA_KEY,
+} from "../utils/constants";
 
 // -- Interfaces and Context --
 export interface SafeWalletContextType {
@@ -58,7 +61,7 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("msigWalletData");
+      const stored = localStorage.getItem(SAFE_WALLET_DATA_KEY);
       if (stored) {
         try {
           setSafeWalletData(JSON.parse(stored));
@@ -74,7 +77,10 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (loaded) {
-      localStorage.setItem("msigWalletData", JSON.stringify(safeWalletData));
+      localStorage.setItem(
+        SAFE_WALLET_DATA_KEY,
+        JSON.stringify(safeWalletData),
+      );
     }
   }, [safeWalletData, loaded]);
   // Build contractNetworks whenever chains change

@@ -1,4 +1,5 @@
 // Types for SafeProvider helpers
+import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { ContractNetworks } from "./contractNetworks";
 
 type SafeStep = {
@@ -114,3 +115,12 @@ export interface SafeWalletData {
     };
   };
 }
+
+export type AbiFunctionItem = {
+  type: string;
+  name: string;
+  inputs?: { name: string; type: string }[];
+};
+
+// Preview type for import
+export type ImportTxPreview = EthSafeTransaction | { error: string } | null;

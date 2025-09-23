@@ -6,11 +6,11 @@ import AppSection from "@/app/components/AppSection";
 import AppAddress from "@/app/components/AppAddress";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useChains } from "wagmi";
-import StepSigners from "./components/StepSigners";
-import StepNetworks from "./components/StepNameAndNetworks";
-import SafeDetails from "../components/SafeDetails";
-import Stepper from "./components/Stepper";
-import { WorkflowModal } from "@/app/components/WorkflowModal";
+import StepSigners from "@/app/components/StepSigners";
+import StepNetworks from "@/app/components/StepNameAndNetworks";
+import SafeDetails from "@/app/components/SafeDetails";
+import Stepper from "@/app/components/Stepper";
+import DeploymentModal from "@/app/components/DeploymentModal";
 import { isValidAddress } from "@/app/utils/helpers";
 import {
   CREATE_STEPS,
@@ -435,7 +435,7 @@ export default function CreateSafeClient() {
         </div>
       </AppSection>
       {/* Modal outside of container flex */}
-      <WorkflowModal
+      <DeploymentModal
         open={modalOpen}
         steps={deploySteps}
         stepLabels={STEPS_DEPLOY_LABEL}

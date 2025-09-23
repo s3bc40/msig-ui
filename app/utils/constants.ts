@@ -58,3 +58,7 @@ export const DEFAULT_SAFE_WALLET_DATA = {
     visitedSafes: {},
   },
 };
+
+// LocalStorage keys
+export const SAFE_TX_STORAGE_KEY = "MSIGUI_safeCurrentTxMap";
+export const SAFE_WALLET_DATA_KEY = "MSIGUI_safeWalletData";

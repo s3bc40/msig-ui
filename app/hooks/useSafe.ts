@@ -8,7 +8,7 @@ import {
 } from "../utils/helpers";
 
 // Cache for protocolKit instances (per chainId+safeAddress)
-import { useSafeKitContext } from "../provider/SafeKitProvider";
+import { useSafeTxContext } from "../provider/SafeTxProvider";
 import Safe, {
   EthSafeTransaction,
   SafeConfig,
@@ -22,7 +22,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
 
   const { safeWalletData, contractNetworks, addSafe, removeSafe } =
     useSafeWalletContext();
-  const { saveTransaction, getTransaction } = useSafeKitContext();
+  const { saveTransaction, getTransaction } = useSafeTxContext();
 
   // Get Safe name from addressBook for current chain
   const chainId = chain?.id ? String(chain.id) : undefined;
@@ -241,9 +241,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
         const kit = await Safe.init(config);
         let deploymentTx, kitClient, txHash;
         try {
-          console.log("Creating deployment transaction with config:", config);
           deploymentTx = await kit.createSafeDeploymentTransaction();
-          console.log("Deployment transaction created:", deploymentTx);
           kitClient = await kit.getSafeProvider().getExternalSigner();
           steps[0].status = "success";
           steps[1].status = "running";
@@ -395,7 +393,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
     async (safeTx: EthSafeTransaction) => {
       const kit = kitRef.current;
       if (!kit) return null;
-      console.log("Broadcasting SafeTransaction:", safeTx);
       return kit.executeTransaction(safeTx);
     },
     [],
@@ -414,7 +411,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
         signed = safeTx.signatures.has(signer.toLowerCase());
       }
       setHasSigned(signed);
-      console.log("Reconstructed SafeTransaction:", safeTx);
       return safeTx;
     }, [getTransaction, signer, safeAddress]);
 
