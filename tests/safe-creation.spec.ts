@@ -161,3 +161,126 @@ test("should create a new safe account and navigate to dashboard", async ({
     "Test Safe",
   );
 });
+
+test("should create a new safe account on Sepolia and Anvil and show undeployed row", async ({
+  page,
+  metamask,
+}) => {
+  await page.goto("/");
+
+  // Connect wallet if not already connected
+  if (
+    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
+  ) {
+    await page.locator('[data-testid="rk-connect-button"]').first().click();
+    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
+      timeout: 10000,
+    });
+    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
+    await metamask.connectToDapp();
+  }
+
+  // Click continue button to go past account selection
+  const continueBtn = await page.locator(
+    '[data-testid="continue-with-account"]',
+  );
+  if (await continueBtn.isVisible()) {
+    await continueBtn.click();
+  }
+
+  // Check we are on accounts page
+  await page.waitForURL("/accounts");
+  await expect(page).toHaveURL(/\/accounts$/);
+
+  // Click navigation button to go to safe creation page
+  await page.waitForSelector('[data-testid="create-safe-nav-btn"]', {
+    timeout: 10000,
+  });
+  await page.locator('[data-testid="create-safe-nav-btn"]').click();
+
+  // Step 1: Fill in safe name and select Sepolia + Anvil networks
+  await page.waitForSelector('[data-testid="safe-name-input"]', {
+    timeout: 10000,
+  });
+  await page.locator('[data-testid="safe-name-input"]').fill("MultiNet Safe");
+
+  // Select Sepolia network badge button
+  const sepoliaBtn = await page.locator(
+    'input[data-testid^="network-badge-btn-"][aria-label*="sepolia" i]',
+  );
+  if ((await sepoliaBtn.count()) > 0) {
+    await sepoliaBtn.first().click();
+  }
+  // Select Anvil network badge button
+  const anvilBtn = await page.locator(
+    'input[data-testid^="network-badge-btn-"][aria-label*="anvil" i]',
+  );
+  if ((await anvilBtn.count()) > 0) {
+    await anvilBtn.first().click();
+  }
+
+  // Click Next to go to signers step
+  await page.locator('button.btn-primary:has-text("Next")').click();
+
+  // Step 2: Add signer (StepSigners)
+  await page.waitForSelector('[data-testid="signer-input-0"]', {
+    timeout: 10000,
+  });
+  await page
+    .locator('[data-testid="signer-input-0"]')
+    .fill("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+  // Optionally add another owner
+  // await page.locator('[data-testid="add-owner-btn"]').click();
+  // Set threshold (if needed)
+  await page.locator('[data-testid="threshold-input"]').fill("1");
+  // Click Next to go to review step
+  await page.locator('button.btn-primary:has-text("Next")').click();
+
+  // Step 3: Review & create
+  const details = page.locator('[data-testid="safe-details-root"]');
+  await expect(details.locator('[data-testid="safe-details-name"]')).toHaveText(
+    "MultiNet Safe",
+  );
+  await expect(
+    details.locator('[data-testid="safe-details-networks"]'),
+  ).toContainText("Sepolia");
+  await expect(
+    details.locator('[data-testid="safe-details-networks"]'),
+  ).toContainText("Anvil");
+  await expect(
+    details.locator('[data-testid="safe-details-signers"]'),
+  ).toBeVisible();
+  await expect(
+    details.locator('[data-testid="safe-details-signer-0"]'),
+  ).toContainText("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+  await expect(
+    details.locator('[data-testid="safe-details-threshold-value"]'),
+  ).toContainText("1 / 1");
+
+  // Wait for prediction to finish and assert predicted address
+  await page.waitForSelector('[data-testid="predicted-safe-address-value"]', {
+    timeout: 15000,
+  });
+  await expect(
+    page.locator('[data-testid="predicted-safe-address-value"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-testid="predicted-safe-address-value"]'),
+  ).not.toHaveText("0x");
+
+  // Click Create Safe
+  await page.locator('[data-testid="add-accounts-btn"]').click();
+
+  // Wait to be navigated back to accounts page
+  await page.waitForURL("/accounts");
+  await expect(
+    page.locator('[data-testid="toggle-deployed-undeployed"]'),
+  ).toBeVisible();
+  // Toggle to show undeployed safes
+  await page.locator('[data-testid="toggle-deployed-undeployed"]').click();
+
+  // Assert undeployed safe appears in the list
+  await expect(page.locator('[data-testid="safe-account-row"]')).toContainText(
+    "MultiNet Safe",
+  );
+});

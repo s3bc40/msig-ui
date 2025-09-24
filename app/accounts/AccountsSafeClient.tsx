@@ -171,6 +171,7 @@ export default function AccountsPage() {
                 className="toggle toggle-primary"
                 checked={showDeployed}
                 onChange={() => setShowDeployed(!showDeployed)}
+                data-testid="toggle-deployed-undeployed"
               />
               <span className="label-text">Deployed</span>
             </label>
