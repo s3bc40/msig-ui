@@ -1,6 +1,7 @@
 // Types for SafeProvider helpers
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { ContractNetworks } from "./contractNetworks";
+import { Chain } from "viem";
 
 type SafeStep = {
   status: "idle" | "running" | "success" | "error";
@@ -124,3 +125,17 @@ export type AbiFunctionItem = {
 
 // Preview type for import
 export type ImportTxPreview = EthSafeTransaction | { error: string } | null;
+
+// DeploymentModal props
+export interface DeploymentModalProps {
+  open: boolean;
+  steps: Array<{ step: string; status: string }>;
+  stepLabels: Record<string, string>;
+  txHash?: string | null;
+  error?: string | null;
+  selectedNetwork?: Chain;
+  onClose: () => void;
+  closeLabel?: string;
+  onSuccess?: () => void;
+  successLabel?: string;
+}

@@ -329,16 +329,24 @@ export default function CreateSafeClient() {
 
   return (
     <>
-      <AppSection>
+      <AppSection data-testid="create-safe-section">
         <div className="grid w-full grid-cols-6 items-center">
           <div className="self-start">
-            <BtnCancel href="/accounts" />
+            <BtnCancel href="/accounts" data-testid="cancel-create-safe-btn" />
           </div>
-          <Stepper steps={CREATE_STEPS} currentStep={currentStep} />
+          <Stepper
+            steps={CREATE_STEPS}
+            currentStep={currentStep}
+            data-testid="create-safe-stepper"
+          />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center">
           {currentStep === 2 ? (
-            <AppCard title="Review & Validate Safe Account" className="w-full">
+            <AppCard
+              title="Review & Validate Safe Account"
+              className="w-full"
+              data-testid="review-safe-card"
+            >
               <SafeDetails
                 safeName={safeName.trim() || randomName}
                 selectedNetworks={selectedChains}
@@ -348,13 +356,16 @@ export default function CreateSafeClient() {
               <div className="divider my-0" />
               <div className="flex flex-col gap-4">
                 {isPredicting ? (
-                  <div className="flex items-center gap-2">
+                  <div
+                    className="flex items-center gap-2"
+                    data-testid="safe-predicting-indicator"
+                  >
                     <span>Predicting Safe address</span>
                     <span className="loading loading-dots loading-xs" />
                   </div>
                 ) : (
                   Object.keys(predictedAddresses).length > 0 && (
-                    <div>
+                    <div data-testid="predicted-safe-address">
                       <p className="mb-1 text-lg font-semibold">
                         Predicted Safe Address:
                       </p>
@@ -366,19 +377,26 @@ export default function CreateSafeClient() {
                             ) || "N/A"
                           }
                           className="text-sm"
+                          testid="predicted-safe-address-value"
                         />
                       </div>
                     </div>
                   )
                 )}
                 {predictError && (
-                  <div className="alert alert-error">{predictError}</div>
+                  <div
+                    className="alert alert-error"
+                    data-testid="safe-predict-error"
+                  >
+                    {predictError}
+                  </div>
                 )}
                 <div className="mt-4 flex justify-between gap-2">
                   <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => setCurrentStep(1)}
+                    data-testid="back-to-owners-btn"
                   >
                     Back to Owners
                   </button>
@@ -394,6 +412,7 @@ export default function CreateSafeClient() {
                         isDeploying
                       }
                       onClick={handleDeploySafe}
+                      data-testid="create-safe-btn"
                     >
                       {isDeploying ? "Deploying..." : "Create Safe"}
                     </button>
@@ -409,6 +428,7 @@ export default function CreateSafeClient() {
                         isPredicting
                       }
                       onClick={handleValidateMultiChain}
+                      data-testid="add-accounts-btn"
                     >
                       Add accounts
                     </button>
@@ -418,15 +438,20 @@ export default function CreateSafeClient() {
             </AppCard>
           ) : (
             <div className="grid w-full grid-cols-12 gap-8">
+              {/* Step content: pass testid via props if possible */}
               {stepContent[currentStep]}
               {/* Safe Info Card: Display Selected Networks */}
               <div className="col-span-10 col-start-2 md:col-span-5 md:col-start-auto">
-                <AppCard title="Safe Account Preview">
+                <AppCard
+                  title="Safe Account Preview"
+                  data-testid="safe-preview-card"
+                >
                   <SafeDetails
                     safeName={safeName.trim() || randomName}
                     selectedNetworks={selectedChains}
                     signers={signers}
                     threshold={threshold}
+                    data-testid="safe-preview-details"
                   />
                 </AppCard>
               </div>

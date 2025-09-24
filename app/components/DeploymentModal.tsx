@@ -1,19 +1,6 @@
 import React from "react";
 import AppAddress from "@/app/components/AppAddress";
-import { Chain } from "viem";
-
-export interface WorkflowModalProps {
-  open: boolean;
-  steps: Array<{ step: string; status: string }>;
-  stepLabels: Record<string, string>;
-  txHash?: string | null;
-  error?: string | null;
-  selectedNetwork?: Chain;
-  onClose: () => void;
-  closeLabel?: string;
-  onSuccess?: () => void;
-  successLabel?: string;
-}
+import { DeploymentModalProps } from "../utils/types";
 
 export default function DeploymentModal({
   open,
@@ -26,27 +13,46 @@ export default function DeploymentModal({
   closeLabel = "Close",
   onSuccess,
   successLabel,
-}: WorkflowModalProps) {
+}: DeploymentModalProps) {
   if (!open) return null;
   return (
     <dialog
       id="workflow_modal"
       className="modal modal-bottom sm:modal-middle"
       open
+      data-testid="deployment-modal-root"
     >
-      <div className="modal-box flex !max-w-3xl flex-col gap-6 p-8">
-        <h3 className="mb-4 text-lg font-bold">Workflow Progress</h3>
-        <div className="mb-4">
-          <ul className="steps w-full">
+      <div
+        className="modal-box flex !max-w-3xl flex-col gap-6 p-8"
+        data-testid="deployment-modal-box"
+      >
+        <h3
+          className="mb-4 text-lg font-bold"
+          data-testid="deployment-modal-title"
+        >
+          Workflow Progress
+        </h3>
+        <div className="mb-4" data-testid="deployment-modal-steps">
+          <ul
+            className="steps w-full"
+            data-testid="deployment-modal-steps-list"
+          >
             {steps.map((step: { step: string; status: string }) => {
               let stepClass = "step ";
               if (step.status === "running") stepClass += "step-primary";
               else if (step.status === "success") stepClass += "step-success";
               else if (step.status === "error") stepClass += "step-error";
               return (
-                <li key={step.step} className={stepClass}>
+                <li
+                  key={step.step}
+                  className={stepClass}
+                  data-testid={`deployment-modal-step-${step.step}`}
+                >
                   {step.status === "running" ? (
-                    <span className="loading loading-spinner loading-xs" />
+                    <span
+                      className="loading loading-spinner loading-xs"
+                      data-testid={`deployment-modal-step-loading-${step.step}`}
+                    />
                   ) : null}
                   {stepLabels[step.step]}
                 </li>
@@ -63,26 +69,42 @@ export default function DeploymentModal({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link link-primary ml-2"
+                  data-testid="deployment-modal-txhash-link"
                 >
-                  <AppAddress address={txHash} className="text-xs" />
+                  <AppAddress
+                    address={txHash}
+                    className="text-xs"
+                    testid="deployment-modal-txhash"
+                  />
                 </a>
               ) : (
-                <AppAddress address={txHash} className="ml-2 text-xs" />
+                <AppAddress
+                  address={txHash}
+                  className="ml-2 text-xs"
+                  testid="deployment-modal-txhash"
+                />
               )}
             </div>
           )}
           {error && (
-            <div className="alert alert-error mt-4 w-full max-w-full overflow-x-auto break-words">
+            <div
+              className="alert alert-error mt-4 w-full max-w-full overflow-x-auto break-words"
+              data-testid="deployment-modal-error"
+            >
               <pre className="text-xs whitespace-pre-wrap">{error}</pre>
             </div>
           )}
         </div>
-        <div className="flex justify-center gap-4">
+        <div
+          className="flex justify-center gap-4"
+          data-testid="deployment-modal-actions"
+        >
           {onSuccess && successLabel && !error ? (
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => onSuccess()}
+              data-testid="deployment-modal-success-btn"
             >
               {successLabel}
             </button>
@@ -92,6 +114,7 @@ export default function DeploymentModal({
               disabled={!error}
               className="btn btn-secondary"
               onClick={onClose}
+              data-testid="deployment-modal-close-btn"
             >
               {closeLabel}
             </button>

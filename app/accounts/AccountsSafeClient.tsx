@@ -142,14 +142,22 @@ export default function AccountsPage() {
 
   return (
     <AppSection className="mx-auto max-w-4xl">
-      <AppCard>
+      <AppCard testid="safe-accounts-table">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Safe Accounts</h2>
           <div className="flex flex-col gap-2 md:flex-row">
-            <Link href="/new-safe/create" className="btn btn-primary btn-sm">
+            <Link
+              href="/new-safe/create"
+              className="btn btn-primary btn-sm"
+              data-testid="create-safe-nav-btn"
+            >
               Create Safe
             </Link>
-            <Link href="/new-safe/connect" className="btn btn-secondary btn-sm">
+            <Link
+              href="/new-safe/connect"
+              className="btn btn-secondary btn-sm"
+              data-testid="add-safe-nav-btn"
+            >
               Add Safe
             </Link>
           </div>
@@ -179,6 +187,7 @@ export default function AccountsPage() {
                 <div
                   className="bg-base-100 border-base-300 collapse-arrow collapse border"
                   key={safeAddress}
+                  data-testid="safe-account-row"
                 >
                   <input type="checkbox" />
                   <div className="collapse-title flex items-center gap-2 font-semibold">
@@ -220,12 +229,14 @@ export default function AccountsPage() {
         <button
           className="btn btn-primary btn-outline btn-sm"
           onClick={handleExport}
+          data-testid="export-wallets-btn"
         >
           Export Wallets
         </button>
         <button
           className="btn btn-secondary btn-outline btn-sm"
           onClick={handleImportClick}
+          data-testid="import-wallets-btn"
         >
           Import Wallets
         </button>
@@ -244,6 +255,7 @@ export default function AccountsPage() {
         onClose={() => setShowImportModal(false)}
         boxClassName="modal-box w-full max-w-2xl flex flex-col gap-6 p-8"
         showCloseButton={false}
+        data-testid="import-modal"
       >
         <h3 className="mb-4 text-lg font-bold">Import SafeWallet Data</h3>
         <>
@@ -282,6 +294,7 @@ export default function AccountsPage() {
                   setShowImportModal(false);
                 }
               }}
+              data-testid="replace-wallets-btn"
             >
               Replace
             </button>

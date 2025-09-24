@@ -90,6 +90,7 @@ export default function StepSigners({
                 className={`input flex-1 ${getInputErrorClass(owner, idx)}`}
                 pattern="^0x[a-fA-F0-9]{40}$"
                 required
+                data-testid={`signer-input-${idx}`}
               />
               {signers.length > 1 && (
                 <button
@@ -108,6 +109,7 @@ export default function StepSigners({
           type="button"
           className="btn btn-secondary btn-soft w-fit"
           onClick={addSignerField}
+          data-testid="add-owner-btn"
         >
           + Add Owner
         </button>
@@ -125,6 +127,7 @@ export default function StepSigners({
             onChange={handleThresholdChange}
             className="input validator w-fit"
             required
+            data-testid="threshold-input"
           />
           <p className="text-sm">
             out of {signers.length} signers required to confirm a transaction

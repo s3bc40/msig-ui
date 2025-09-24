@@ -55,6 +55,7 @@ export default function StepNameAndNetworks({
             onChange={(e) => setSafeName(sanitizeUserInput(e.target.value))}
             placeholder={placeholder}
             className="input input-bordered flex-1"
+            data-testid="safe-name-input"
           />
         </div>
         <label className="label">
@@ -75,6 +76,7 @@ export default function StepNameAndNetworks({
             value="×"
             aria-label="Reset selection"
             onClick={() => setSelectedChains([])}
+            data-testid="network-reset-btn"
           />
           {chains.map((chainObj) => {
             const selected = selectedChains.some((c) => c.id === chainObj.id);
@@ -86,6 +88,7 @@ export default function StepNameAndNetworks({
                 value={chainObj.name}
                 aria-label={chainObj.name}
                 onClick={() => toggleChain(chainObj)}
+                data-testid={`network-badge-btn-${chainObj.id}`}
               />
             );
           })}
