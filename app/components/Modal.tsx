@@ -8,6 +8,7 @@ export interface ModalProps {
   boxClassName?: string;
   showCloseButton?: boolean;
   closeLabel?: string;
+  testid?: string;
 }
 
 export default function Modal({
@@ -18,10 +19,11 @@ export default function Modal({
   boxClassName = "modal-box flex flex-col gap-6 p-8",
   showCloseButton = true,
   closeLabel = "Close",
+  testid = "modal",
 }: ModalProps) {
   if (!open) return null;
   return (
-    <dialog className={className} open>
+    <dialog className={className} open data-testid={testid}>
       <div className={boxClassName}>
         {children}
         {showCloseButton && (

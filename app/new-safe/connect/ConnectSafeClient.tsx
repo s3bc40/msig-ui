@@ -104,6 +104,7 @@ export default function ConnectSafeClient() {
             value={safeName}
             onChange={(e) => setSafeName(sanitizeUserInput(e.target.value))}
             disabled={loading}
+            data-testid="safe-name-input"
           />
           <label className="label">
             <span className="label-text-alt">
@@ -122,6 +123,7 @@ export default function ConnectSafeClient() {
             pattern="^0x[a-fA-F0-9]{40}$"
             required
             disabled={loading}
+            data-testid="safe-address-input"
           />
         </fieldset>
         <div className="mb-4">
@@ -131,6 +133,7 @@ export default function ConnectSafeClient() {
             value={selectedChain}
             onChange={(e) => setSelectedChain(e.target.value)}
             disabled={loading}
+            data-testid="network-select"
           >
             <option value="" disabled>
               Choose a network
@@ -147,6 +150,7 @@ export default function ConnectSafeClient() {
           className="btn btn-primary w-full"
           onClick={handleAddSafe}
           disabled={loading}
+          data-testid="add-safe-btn"
         >
           {loading ? "Adding..." : "Add Safe"}
         </button>

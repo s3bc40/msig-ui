@@ -10,6 +10,7 @@ import AppCard from "@/app/components/AppCard";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
 import { useChains, useSwitchChain } from "wagmi";
 import { SafeWalletData } from "../utils/types";
+import ImportSafeWalletModal from "../components/ImportSafeWalletModal";
 
 export default function AccountsPage() {
   const wagmiChains = useChains();
@@ -96,48 +97,6 @@ export default function AccountsPage() {
     reader.readAsText(file);
     // Reset input value so selecting the same file again will trigger onChange
     e.target.value = "";
-  }
-
-  function getSafeWalletSummary(
-    data: SafeWalletData | { error: string } | null,
-  ): string {
-    if (!data || typeof data !== "object" || "error" in data)
-      return "No valid SafeWallet data.";
-    let summary = "";
-    try {
-      // Added Safes
-      const addedSafes = data.data?.addedSafes ?? {};
-      const chainSafes: string[] = [];
-      Object.entries(addedSafes).forEach(([chain, safesObj]) => {
-        const count = Object.keys(safesObj).length;
-        chainSafes.push(`${chain}: ${count} Safe${count !== 1 ? "s" : ""}`);
-      });
-      summary += `Added Safe Accounts on ${Object.keys(addedSafes).length} chains\n`;
-      summary += chainSafes.join("\n") + "\n";
-      // Address Book
-      const addressBook = data.data?.addressBook ?? {};
-      const chainContacts: string[] = [];
-      Object.entries(addressBook).forEach(([chain, contactsObj]) => {
-        const count = Object.keys(contactsObj).length;
-        chainContacts.push(
-          `${chain}: ${count} contact${count !== 1 ? "s" : ""}`,
-        );
-      });
-      summary += `Address book for ${Object.keys(addressBook).length} chains\n`;
-      summary += chainContacts.join("\n") + "\n";
-      // Visited Safe Accounts history
-      summary += `Visited Safe Accounts history\n`;
-      // Not activated Safe Accounts
-      const undeployedSafes = data.data?.undeployedSafes ?? {};
-      let undeployedCount = 0;
-      Object.values(undeployedSafes).forEach((safesObj) => {
-        undeployedCount += Object.keys(safesObj).length;
-      });
-      summary += `Not activated Safe Accounts ${undeployedCount}`;
-    } catch {
-      summary = "Could not summarize SafeWallet data.";
-    }
-    return summary;
   }
 
   return (
@@ -251,57 +210,12 @@ export default function AccountsPage() {
       </div>
 
       {/* Import Modal using generic Modal component */}
-      <Modal
+      <ImportSafeWalletModal
         open={showImportModal}
         onClose={() => setShowImportModal(false)}
-        boxClassName="modal-box w-full max-w-2xl flex flex-col gap-6 p-8"
-        showCloseButton={false}
-        data-testid="import-modal"
-      >
-        <h3 className="mb-4 text-lg font-bold">Import SafeWallet Data</h3>
-        <>
-          <div className="alert alert-warning mb-4 text-sm">
-            <span>
-              <strong>Warning:</strong> This will replace all your current
-              SafeWallet data. This action cannot be undone.
-            </span>
-          </div>
-          <div className="bg-base-200 mb-4 w-full rounded border p-4 shadow">
-            <pre className="max-h-[40vh] overflow-y-auto font-mono text-xs break-words whitespace-pre-wrap">
-              {getSafeWalletSummary(importPreview)}
-            </pre>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              className="btn btn-outline"
-              onClick={() => setShowImportModal(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-error"
-              disabled={
-                typeof importPreview !== "object" ||
-                importPreview === null ||
-                "error" in importPreview
-              }
-              onClick={() => {
-                if (
-                  importPreview &&
-                  typeof importPreview === "object" &&
-                  !("error" in importPreview)
-                ) {
-                  setSafeWalletData(importPreview as SafeWalletData);
-                  setShowImportModal(false);
-                }
-              }}
-              data-testid="replace-wallets-btn"
-            >
-              Replace
-            </button>
-          </div>
-        </>
-      </Modal>
+        importPreview={importPreview}
+        setSafeWalletData={setSafeWalletData}
+      />
     </AppSection>
   );
 }

@@ -168,6 +168,9 @@ To run your own local Safe contracts for development, follow these steps:
 > **Note:**
 > Currently, contract addresses are manually maintained in `localContractNetworks.ts`. In the future, we may automate this process or use environment variables for better flexibility.
 
+`pkill -9 ^next-server` # To stop any running Next.js server instances.
+`pnpm exec playwright test` # To run end-to-end tests.
+
 ---
 
 ## References
