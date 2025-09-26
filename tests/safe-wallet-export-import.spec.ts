@@ -4,20 +4,7 @@ import { MOCK_SAFEWALLET_DATA } from "./constants";
 
 const { expect } = test;
 
-test("should export SafeWallet data and verify file content", async ({
-  page,
-  metamask,
-}) => {
-  // Seed localStorage before page load
-  await page.addInitScript(
-    ({ data }) => {
-      localStorage.setItem("MSIGUI_safeWalletData", JSON.stringify(data));
-    },
-    { data: MOCK_SAFEWALLET_DATA },
-  );
-
-  await page.goto("/accounts"); // This must be the first navigation!
-
+test.beforeEach("Setup", async ({ page, metamask }) => {
   // Connect wallet if not already connected
   if (
     await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
@@ -29,6 +16,21 @@ test("should export SafeWallet data and verify file content", async ({
     await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
     await metamask.connectToDapp();
   }
+});
+
+// Export and Import workflow test for SafeWallet data
+test("should export SafeWallet data and verify file content", async ({
+  page,
+}) => {
+  // Seed localStorage before page load
+  await page.addInitScript(
+    ({ data }) => {
+      localStorage.setItem("MSIGUI_safeWalletData", JSON.stringify(data));
+    },
+    { data: MOCK_SAFEWALLET_DATA },
+  );
+
+  await page.goto("/accounts"); // This must be the first navigation!
 
   await page.evaluate((data) => {
     localStorage.setItem("MSIGUI_safeWalletData", JSON.stringify(data));
@@ -78,10 +80,7 @@ test("should export SafeWallet data and verify file content", async ({
   );
 });
 
-test("should import SafeWallet data and restore accounts", async ({
-  page,
-  metamask,
-}) => {
+test("should import SafeWallet data and restore accounts", async ({ page }) => {
   // Seed localStorage with empty data before page load
   await page.addInitScript(() => {
     localStorage.setItem(
@@ -99,18 +98,6 @@ test("should import SafeWallet data and restore accounts", async ({
   });
 
   await page.goto("/accounts");
-
-  // Connect wallet if not already connected
-  if (
-    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
-  ) {
-    await page.locator('[data-testid="rk-connect-button"]').first().click();
-    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 60000,
-    });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
-    await metamask.connectToDapp();
-  }
 
   // Prepare a mock file for import
   const importFilePath = `/tmp/mock_safe_wallet_import.json`;

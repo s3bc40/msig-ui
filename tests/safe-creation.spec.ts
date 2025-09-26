@@ -2,10 +2,8 @@ import { testWithMetaMask as test } from "./fixtures/testWithMetamask";
 
 const { expect } = test;
 
-test("should create a new safe account and navigate to dashboard", async ({
-  page,
-  metamask,
-}) => {
+test.beforeEach("Setup", async ({ page, metamask }) => {
+  // Go to home page
   await page.goto("/");
 
   // Connect wallet if not already connected
@@ -37,7 +35,13 @@ test("should create a new safe account and navigate to dashboard", async ({
     timeout: 60000,
   });
   await page.locator('[data-testid="create-safe-nav-btn"]').click();
+});
 
+// Safe creation workflow test for SafeCreation page
+test("should create a new safe account and navigate to dashboard", async ({
+  page,
+  metamask,
+}) => {
   // Step 1: Fill in safe name and select network (StepNameAndNetworks)
   await page.waitForSelector('[data-testid="safe-name-input"]', {
     timeout: 60000,
@@ -125,10 +129,6 @@ test("should create a new safe account and navigate to dashboard", async ({
     },
   );
   await metamask.confirmTransactionAndWaitForMining();
-  // const stepLoadingTxSent = page.locator(
-  //   '[data-testid="deployment-modal-step-loading-txSent"]',
-  // );
-  // await stepLoadingTxSent.waitFor({ state: "hidden", timeout: 60000 });
 
   // Check that step is marked as success
   const stepConfirmed = page.locator(
@@ -164,40 +164,7 @@ test("should create a new safe account and navigate to dashboard", async ({
 
 test("should create a new safe account on Sepolia and Anvil and show undeployed row", async ({
   page,
-  metamask,
 }) => {
-  await page.goto("/");
-
-  // Connect wallet if not already connected
-  if (
-    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
-  ) {
-    await page.locator('[data-testid="rk-connect-button"]').first().click();
-    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 60000,
-    });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
-    await metamask.connectToDapp();
-  }
-
-  // Click continue button to go past account selection
-  const continueBtn = await page.locator(
-    '[data-testid="continue-with-account"]',
-  );
-  if (await continueBtn.isVisible()) {
-    await continueBtn.click();
-  }
-
-  // Check we are on accounts page
-  await page.waitForURL("/accounts");
-  await expect(page).toHaveURL(/\/accounts$/);
-
-  // Click navigation button to go to safe creation page
-  await page.waitForSelector('[data-testid="create-safe-nav-btn"]', {
-    timeout: 60000,
-  });
-  await page.locator('[data-testid="create-safe-nav-btn"]').click();
-
   // Step 1: Fill in safe name and select Sepolia + Anvil networks
   await page.waitForSelector('[data-testid="safe-name-input"]', {
     timeout: 60000,

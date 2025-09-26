@@ -1,6 +1,7 @@
 export const ANVIL_SAFE_THREE_SIGNERS =
   "0xe80f3c2046c04bf94b04ca142f94fbf7480110c7";
 export const ANVIL_SAFE_MULTI = "0xbd84F8EB4fC2054E177C44966E0fe6F4D843a6cF";
+export const CHAIN_ID_ANVIL = 31337;
 
 export const MOCK_SAFEWALLET_DATA = {
   version: "3.0",
