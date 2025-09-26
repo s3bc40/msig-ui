@@ -147,9 +147,9 @@ export default function AccountsPage() {
                 <div
                   className="bg-base-100 border-base-300 collapse-arrow collapse border"
                   key={safeAddress}
-                  data-testid="safe-account-row"
+                  data-testid={`safe-account-row-${safeAddress}`}
                 >
-                  <input type="checkbox" />
+                  <input type="checkbox" data-testid="safe-account-collapse" />
                   <div className="collapse-title flex items-center gap-2 font-semibold">
                     <span className="text-lg font-bold break-all">
                       {displayName}
@@ -168,6 +168,7 @@ export default function AccountsPage() {
                           onClick={() =>
                             switchChain({ chainId: parseInt(chainId) })
                           }
+                          data-testid={`safe-account-link-${safeAddress}-${chainId}`}
                         >
                           {wagmiChains.find((c) => c.id.toString() === chainId)
                             ?.name || chainId}

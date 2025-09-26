@@ -109,94 +109,166 @@ export default function TxDetailsClient() {
   }
 
   return (
-    <AppSection>
+    <AppSection testid="tx-details-section">
       <div className="mb-4">
-        <BtnCancel href={`/safe/${safeAddress}`} label="Back to Safe" />
+        <BtnCancel
+          href={`/safe/${safeAddress}`}
+          label="Back to Safe"
+          data-testid="tx-details-cancel-btn"
+        />
       </div>
-      <AppCard title="Safe Transaction">
-        <div className="flex flex-col gap-4">
+      <AppCard title="Safe Transaction" data-testid="tx-details-card">
+        <div className="flex flex-col gap-4" data-testid="tx-details-content">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
+            <div
+              className="flex items-center justify-center py-8"
+              data-testid="tx-details-loading-row"
+            >
               <span className="loading loading-dots loading-lg" />
             </div>
           ) : safeTx ? (
             <>
               {/* Transaction details: simple flex column with DaisyUI dividers */}
-              <div className="bg-base-200 rounded-box divide-base-100 flex max-h-80 flex-col divide-y overflow-y-auto shadow-md">
-                <div className="flex items-center justify-between px-4 py-3">
+              <div
+                className="bg-base-200 rounded-box divide-base-100 flex max-h-80 flex-col divide-y overflow-y-auto shadow-md"
+                data-testid="tx-details-data-box"
+              >
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-to-row"
+                >
                   <span className="font-semibold">To</span>
-                  <span className="max-w-[60%] truncate" title={safeTx.data.to}>
+                  <span
+                    className="max-w-[60%] truncate"
+                    title={safeTx.data.to}
+                    data-testid="tx-details-to-value"
+                  >
                     {safeTx.data.to}
                   </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="font-semibold">Value</span>
-                  <span>
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-value-row"
+                >
+                  <span className="font-semibold">Value (wei)</span>
+                  <span data-testid="tx-details-value-value">
                     {safeTx.data.value?.toString?.() ??
                       String(safeTx.data.value)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-nonce-row"
+                >
                   <span className="font-semibold">Nonce</span>
-                  <span>{safeTx.data.nonce}</span>
+                  <span data-testid="tx-details-nonce-value">
+                    {safeTx.data.nonce}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-operation-row"
+                >
                   <span className="font-semibold">Operation</span>
-                  <span>{safeTx.data.operation}</span>
+                  <span data-testid="tx-details-operation-value">
+                    {safeTx.data.operation}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 text-right">
+                <div
+                  className="flex items-center justify-between px-4 py-3 text-right"
+                  data-testid="tx-details-data-row"
+                >
                   <span className="font-semibold">Data</span>
                   <DataPreview value={safeTx.data.data} />
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-gasprice-row"
+                >
                   <span className="font-semibold">Gas Price</span>
-                  <span>{safeTx.data.gasPrice}</span>
+                  <span data-testid="tx-details-gasprice-value">
+                    {safeTx.data.gasPrice}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-basegas-row"
+                >
                   <span className="font-semibold">Base Gas</span>
-                  <span>{safeTx.data.baseGas}</span>
+                  <span data-testid="tx-details-basegas-value">
+                    {safeTx.data.baseGas}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-safetxgas-row"
+                >
                   <span className="font-semibold">SafeTxGas</span>
-                  <span>{safeTx.data.safeTxGas}</span>
+                  <span data-testid="tx-details-safetxgas-value">
+                    {safeTx.data.safeTxGas}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-gastoken-row"
+                >
                   <span className="font-semibold">Gas Token</span>
                   <span
                     className="max-w-[60%] truncate"
                     title={safeTx.data.gasToken}
+                    data-testid="tx-details-gastoken-value"
                   >
                     {safeTx.data.gasToken}
                   </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  data-testid="tx-details-refundreceiver-row"
+                >
                   <span className="font-semibold">Refund Receiver</span>
                   <span
                     className="max-w-[60%] truncate"
                     title={safeTx.data.refundReceiver}
+                    data-testid="tx-details-refundreceiver-value"
                   >
                     {safeTx.data.refundReceiver}
                   </span>
                 </div>
-                <div className="flex flex-col gap-1 px-4 py-3">
+                <div
+                  className="flex flex-col gap-1 px-4 py-3"
+                  data-testid="tx-details-signatures-row"
+                >
                   <span className="mb-1 font-semibold">Signatures</span>
                   {safeTx.signatures && safeTx.signatures.size > 0 ? (
                     [...safeTx.signatures.values()].map((sigObj, idx) => (
-                      <span key={idx} className="font-mono text-xs break-all">
+                      <span
+                        key={idx}
+                        className="font-mono text-xs break-all"
+                        data-testid={`tx-details-signature-${idx}`}
+                      >
                         Sig {idx + 1}: {sigObj.data}
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-gray-400">No signatures</span>
+                    <span
+                      className="text-xs text-gray-400"
+                      data-testid="tx-details-signatures-empty"
+                    >
+                      No signatures
+                    </span>
                   )}
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div
+                className="mt-4 flex flex-wrap gap-2"
+                data-testid="tx-details-actions-row"
+              >
                 <button
                   className="btn btn-success"
                   onClick={handleSign}
                   disabled={!isOwner || signing || hasSigned}
                   title={"Signing tx"}
+                  data-testid="tx-details-sign-btn"
                 >
                   {!isOwner ? (
                     "Only Safe owners can sign"
@@ -222,6 +294,7 @@ export default function TxDetailsClient() {
                     ) || broadcasting
                   }
                   title="Broadcasting tx"
+                  data-testid="tx-details-broadcast-btn"
                 >
                   {broadcasting ? (
                     <div className="flex items-center">
@@ -247,11 +320,17 @@ export default function TxDetailsClient() {
                     router.push(`/safe/${safeAddress}`);
                   }}
                   successLabel="Back to Safe"
+                  data-testid="tx-details-broadcast-modal"
                 />
               )}
             </>
           ) : (
-            <div className="text-gray-400">Transaction not found.</div>
+            <div
+              className="text-gray-400"
+              data-testid="tx-details-notfound-alert"
+            >
+              Transaction not found.
+            </div>
           )}
           {/* DaisyUI toast notification */}
           {toast && (
@@ -266,6 +345,7 @@ export default function TxDetailsClient() {
                 margin: "auto",
                 width: "fit-content",
               }}
+              data-testid="tx-details-toast"
             >
               <div className={`alert alert-${toast.type}`}>{toast.message}</div>
             </div>

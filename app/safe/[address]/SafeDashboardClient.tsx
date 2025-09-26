@@ -135,19 +135,19 @@ export default function SafeDashboardClient({
     <AppSection>
       {/* Stat row for key Safe data */}
       <div className="stats stats-horizontal mb-6">
-        <div className="stat">
+        <div className="stat" data-testid="safe-dashboard-threshold">
           <div className="stat-title">Threshold</div>
           <div className="stat-value">{safeInfo?.threshold ?? "-"}</div>
         </div>
-        <div className="stat">
+        <div className="stat" data-testid="safe-dashboard-owners">
           <div className="stat-title">Owners</div>
           <div className="stat-value">{safeInfo?.owners?.length ?? "-"}</div>
         </div>
-        <div className="stat">
+        <div className="stat" data-testid="safe-dashboard-nonce">
           <div className="stat-title">Nonce</div>
           <div className="stat-value">{safeInfo?.nonce ?? "-"}</div>
         </div>
-        <div className="stat">
+        <div className="stat" data-testid="safe-dashboard-balance">
           <div className="stat-title">Balance</div>
           <div className="stat-value text-primary flex gap-1">
             <p>
@@ -157,23 +157,25 @@ export default function SafeDashboardClient({
           </div>
         </div>
       </div>
-      <div className="divider">{safeName ? `${safeName}` : "Safe Details"}</div>
+      <div className="divider" data-testid="safe-dashboard-divider">
+        {safeName ? `${safeName}` : "Safe Details"}
+      </div>
       <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 md:grid-rows-2">
         {/* Safe Info fills left column, spans two rows */}
         <AppCard
           title="Safe Info"
           className="md:col-start-1 md:row-span-2 md:row-start-1"
         >
-          <div className="mb-2">
+          <div className="mb-2" data-testid="safe-dashboard-address-row">
             <span className="font-semibold">Address:</span>
             <AppAddress address={safeAddress} className="ml-2" />
           </div>
-          <div className="mb-2">
+          <div className="mb-2" data-testid="safe-dashboard-owners-row">
             <span className="font-semibold">Owners:</span>
             <ul className="ml-6 list-disc">
               {safeInfo?.owners?.length ? (
                 safeInfo.owners.map((owner) => (
-                  <li key={owner}>
+                  <li key={owner} data-testid={`safe-dashboard-owner-${owner}`}>
                     <AppAddress address={owner} className="text-xs" />
                   </li>
                 ))
@@ -182,7 +184,7 @@ export default function SafeDashboardClient({
               )}
             </ul>
           </div>
-          <div className="mb-2">
+          <div className="mb-2" data-testid="safe-dashboard-version-row">
             <span className="font-semibold">Version:</span>
             <span className="ml-2">{safeInfo?.version ?? "-"}</span>
           </div>
@@ -191,9 +193,13 @@ export default function SafeDashboardClient({
         <AppCard title="Actions" className="md:col-start-2 md:row-start-1">
           <div className="flex flex-col gap-2">
             {/* Transaction import/export buttons */}
-            <div className="mb-2 flex gap-2">
+            <div
+              className="mb-2 flex gap-2"
+              data-testid="safe-dashboard-actions-row"
+            >
               <button
                 className="btn btn-primary btn-outline btn-sm"
+                data-testid="safe-dashboard-export-tx-btn"
                 onClick={() => {
                   if (!currentTx) return;
                   try {
@@ -216,6 +222,7 @@ export default function SafeDashboardClient({
               </button>
               <button
                 className="btn btn-secondary btn-outline btn-sm"
+                data-testid="safe-dashboard-import-tx-btn"
                 onClick={() => fileInputRef.current?.click()}
                 title="Import transaction JSON from file"
               >
@@ -223,6 +230,7 @@ export default function SafeDashboardClient({
               </button>
               <input
                 type="file"
+                data-testid="safe-dashboard-import-tx-input"
                 className="hidden"
                 ref={fileInputRef}
                 accept=".json"
@@ -252,18 +260,30 @@ export default function SafeDashboardClient({
             </div>
             {/* Import Modal with preview and confirmation */}
             {showImportModal && (
-              <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black">
+              <div
+                className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black"
+                data-testid="safe-dashboard-import-tx-modal-root"
+              >
                 <div className="bg-base-100 w-full max-w-lg rounded p-6 shadow-lg">
-                  <h2 className="mb-2 text-lg font-bold">
+                  <h2
+                    className="mb-2 text-lg font-bold"
+                    data-testid="safe-dashboard-import-tx-modal-title"
+                  >
                     Import Transaction JSON
                   </h2>
-                  <div className="alert alert-warning mb-4 text-sm">
+                  <div
+                    className="alert alert-warning mb-4 text-sm"
+                    data-testid="safe-dashboard-import-tx-modal-warning"
+                  >
                     <span>
                       <strong>Warning:</strong> This will replace your current
                       transaction for this Safe. This action cannot be undone.
                     </span>
                   </div>
-                  <div className="bg-base-200 mb-4 w-full rounded border p-4 shadow">
+                  <div
+                    className="bg-base-200 mb-4 w-full rounded border p-4 shadow"
+                    data-testid="safe-dashboard-import-tx-modal-preview"
+                  >
                     <pre className="max-h-[40vh] overflow-y-auto font-mono text-xs break-words whitespace-pre-wrap">
                       {typeof importPreview === "object" &&
                       importPreview !== null
@@ -271,15 +291,20 @@ export default function SafeDashboardClient({
                         : "No valid transaction data."}
                     </pre>
                   </div>
-                  <div className="flex justify-end gap-2">
+                  <div
+                    className="flex justify-end gap-2"
+                    data-testid="safe-dashboard-import-tx-modal-actions"
+                  >
                     <button
                       className="btn btn-outline"
+                      data-testid="safe-dashboard-import-tx-modal-cancel-btn"
                       onClick={() => setShowImportModal(false)}
                     >
                       Cancel
                     </button>
                     <button
                       className="btn btn-primary"
+                      data-testid="safe-dashboard-import-tx-modal-replace-btn"
                       disabled={
                         typeof importPreview !== "object" ||
                         importPreview === null ||
@@ -351,6 +376,7 @@ export default function SafeDashboardClient({
                   <button
                     className="btn btn-outline btn-primary"
                     onClick={handleGoToBuilder}
+                    data-testid="safe-dashboard-go-to-builder-btn"
                   >
                     Go to Builder
                   </button>
@@ -376,18 +402,38 @@ export default function SafeDashboardClient({
         </AppCard>
         {/* Current Transaction in bottom right cell */}
         {currentTx && currentTxHash && (
-          <AppCard title="Current Transaction">
+          <AppCard
+            title="Current Transaction"
+            data-testid="safe-dashboard-current-tx-card"
+          >
             <Link
               className="btn btn-accent btn-outline flex w-full items-center gap-4 rounded"
+              data-testid="safe-dashboard-current-tx-link"
               href={`/safe/${safeAddress}/tx/${currentTxHash}`}
               title="View transaction details"
             >
-              <span className="font-semibold">Tx Hash:</span>
-              <span className="max-w-[30%] truncate" title={currentTxHash}>
+              <span
+                className="font-semibold"
+                data-testid="safe-dashboard-current-tx-hash-label"
+              >
+                Tx Hash:
+              </span>
+              <span
+                className="max-w-[30%] truncate"
+                title={currentTxHash}
+                data-testid="safe-dashboard-current-tx-hash-value"
+              >
                 {currentTxHash}
               </span>
-              <span className="font-semibold">Signatures:</span>
-              <span>{currentTx.signatures?.size ?? 0}</span>
+              <span
+                className="font-semibold"
+                data-testid="safe-dashboard-current-tx-sigs-label"
+              >
+                Signatures:
+              </span>
+              <span data-testid="safe-dashboard-current-tx-sigs-value">
+                {currentTx.signatures?.size ?? 0}
+              </span>
             </Link>
           </AppCard>
         )}

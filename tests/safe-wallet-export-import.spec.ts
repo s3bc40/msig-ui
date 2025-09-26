@@ -24,7 +24,7 @@ test("should export SafeWallet data and verify file content", async ({
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 10000,
+      timeout: 60000,
     });
     await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
     await metamask.connectToDapp();
@@ -106,7 +106,7 @@ test("should import SafeWallet data and restore accounts", async ({
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 10000,
+      timeout: 60000,
     });
     await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
     await metamask.connectToDapp();

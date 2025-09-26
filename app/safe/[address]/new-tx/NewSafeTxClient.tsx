@@ -115,7 +115,24 @@ export default function NewSafeTxClient() {
       setError("Invalid recipient address format.");
       return;
     }
-    // ...existing logic for building tx...
+    // Add transaction to the list
+    setTransactions((txs) => [
+      ...txs,
+      {
+        to: toAddr,
+        value: value.trim(),
+        data: data.trim(),
+        method: selectedMethod,
+        // You can add operation or other fields as needed
+      },
+    ]);
+    // Reset form fields
+    setTo("");
+    setValue("");
+    setData("");
+    setSelectedMethod("");
+    setMethodInputs([]);
+    setInputValues({});
   }
 
   // UI rendering logic
@@ -126,18 +143,29 @@ export default function NewSafeTxClient() {
   return (
     <AppSection className="mx-auto max-w-4xl">
       <div className="mb-4">
-        <BtnCancel href={`/safe/${safeAddress}`} label="Back to Safe" />
+        <BtnCancel
+          href={`/safe/${safeAddress}`}
+          label="Back to Safe"
+          data-testid="new-safe-tx-cancel-btn"
+        />
       </div>
       <div className="flex flex-col gap-6 md:flex-row">
         {/* Transaction Builder (left) */}
         <div className="w-full md:w-1/2">
-          <AppCard title="Build Transaction">
+          <AppCard
+            title="Build Transaction"
+            data-testid="new-safe-tx-builder-card"
+          >
             <form
               onSubmit={handleBuildTx}
               className="flex flex-col gap-4"
               autoComplete="off"
+              data-testid="new-safe-tx-builder-form"
             >
-              <fieldset className="fieldset">
+              <fieldset
+                className="fieldset"
+                data-testid="new-safe-tx-recipient-fieldset"
+              >
                 <legend className="fieldset-legend">Recipient</legend>
                 <input
                   className="input input-bordered w-full"
@@ -145,9 +173,15 @@ export default function NewSafeTxClient() {
                   onChange={(e) => setTo(e.target.value)}
                   placeholder="0x..."
                   autoComplete="off"
+                  pattern="^0x[a-fA-F0-9]{40}$"
+                  required
+                  data-testid="new-safe-tx-recipient-input"
                 />
               </fieldset>
-              <fieldset className="fieldset">
+              <fieldset
+                className="fieldset"
+                data-testid="new-safe-tx-value-fieldset"
+              >
                 <legend className="fieldset-legend">Value (ETH)</legend>
                 <input
                   className="input input-bordered w-full"
@@ -155,9 +189,16 @@ export default function NewSafeTxClient() {
                   onChange={(e) => setValue(e.target.value)}
                   placeholder="0"
                   autoComplete="off"
+                  type="number"
+                  min="0"
+                  step="any"
+                  data-testid="new-safe-tx-value-input"
                 />
               </fieldset>
-              <fieldset className="fieldset">
+              <fieldset
+                className="fieldset"
+                data-testid="new-safe-tx-abi-fieldset"
+              >
                 <legend className="fieldset-legend">ABI (optional)</legend>
                 <textarea
                   className="textarea textarea-bordered w-full"
@@ -168,9 +209,13 @@ export default function NewSafeTxClient() {
                   }}
                   placeholder="Paste contract ABI JSON here"
                   autoComplete="off"
+                  data-testid="new-safe-tx-abi-input"
                 />
                 {abiMethods.length > 0 && (
-                  <div className="mt-2">
+                  <div
+                    className="mt-2"
+                    data-testid="new-safe-tx-abi-methods-select-row"
+                  >
                     <label className="label">Select Method:</label>
                     <select
                       className="select select-bordered w-full"
@@ -184,6 +229,7 @@ export default function NewSafeTxClient() {
                           setInputValues,
                         )
                       }
+                      data-testid="new-safe-tx-abi-methods-select"
                     >
                       <option value="">-- Select --</option>
                       {abiMethods.map((method) => (
@@ -195,7 +241,10 @@ export default function NewSafeTxClient() {
                   </div>
                 )}
                 {methodInputs.length > 0 && (
-                  <div className="mt-2 flex flex-col gap-2">
+                  <div
+                    className="mt-2 flex flex-col gap-2"
+                    data-testid="new-safe-tx-abi-method-inputs-row"
+                  >
                     {methodInputs.map((input) => (
                       <input
                         key={input.name}
@@ -209,12 +258,16 @@ export default function NewSafeTxClient() {
                           }))
                         }
                         autoComplete="off"
+                        data-testid={`new-safe-tx-abi-method-input-${input.name}`}
                       />
                     ))}
                   </div>
                 )}
               </fieldset>
-              <fieldset className="fieldset">
+              <fieldset
+                className="fieldset"
+                data-testid="new-safe-tx-data-fieldset"
+              >
                 <legend className="fieldset-legend">Data (hex)</legend>
                 <label className="label cursor-pointer">
                   <input
@@ -222,6 +275,7 @@ export default function NewSafeTxClient() {
                     checked={showDataHex}
                     onChange={() => setShowDataHex((v) => !v)}
                     className="toggle toggle-xs"
+                    data-testid="new-safe-tx-data-toggle"
                   />
                   <span className="ml-2">Show Data Hex</span>
                 </label>
@@ -233,16 +287,24 @@ export default function NewSafeTxClient() {
                       onChange={(e) => setData(e.target.value)}
                       placeholder="0x..."
                       autoComplete="off"
+                      data-testid="new-safe-tx-data-input"
                     />
                   </>
                 )}
               </fieldset>
               {error && (
-                <div className="alert alert-error text-sm whitespace-pre-wrap">
+                <div
+                  className="alert alert-error text-sm whitespace-pre-wrap"
+                  data-testid="new-safe-tx-error-alert"
+                >
                   {error}
                 </div>
               )}
-              <button type="submit" className="btn btn-primary">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                data-testid="new-safe-tx-add-btn"
+              >
                 Add Transaction
               </button>
             </form>
@@ -250,9 +312,15 @@ export default function NewSafeTxClient() {
         </div>
         {/* Transactions List & Build (right) */}
         <div className="w-full md:w-1/2">
-          <AppCard title="Transactions List">
-            <div className="overflow-x-auto">
-              <table className="table">
+          <AppCard
+            title="Transactions List"
+            data-testid="new-safe-tx-list-card"
+          >
+            <div
+              className="overflow-x-auto"
+              data-testid="new-safe-tx-list-table-row"
+            >
+              <table className="table" data-testid="new-safe-tx-list-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -263,7 +331,7 @@ export default function NewSafeTxClient() {
                 </thead>
                 <tbody>
                   {transactions.length === 0 ? (
-                    <tr>
+                    <tr data-testid="new-safe-tx-list-empty-row">
                       <td
                         colSpan={4}
                         className="text-center text-sm text-gray-400"
@@ -273,20 +341,26 @@ export default function NewSafeTxClient() {
                     </tr>
                   ) : (
                     transactions.map((tx, idx) => (
-                      <tr key={idx}>
+                      <tr key={idx} data-testid={`new-safe-tx-list-row-${idx}`}>
                         <td>{idx + 1}</td>
-                        <td className="font-mono text-xs break-all">
+                        <td
+                          className="font-mono text-xs break-all"
+                          data-testid={`new-safe-tx-list-recipient-${idx}`}
+                        >
                           {tx.to.length === 42
                             ? `${tx.to.slice(0, 6)}...${tx.to.slice(-4)}`
                             : tx.to}
                         </td>
-                        <td>{tx.method}</td>
+                        <td data-testid={`new-safe-tx-list-method-${idx}`}>
+                          {tx.method}
+                        </td>
                         <td>
                           <button
                             className="btn btn-ghost btn-xs"
                             onClick={() => handleRemoveTransaction(idx)}
                             type="button"
                             aria-label="Remove transaction"
+                            data-testid={`new-safe-tx-list-remove-btn-${idx}`}
                           >
                             X
                           </button>
@@ -305,6 +379,7 @@ export default function NewSafeTxClient() {
               title={
                 !isOwner ? "Only Safe owners can build transactions" : undefined
               }
+              data-testid="new-safe-tx-build-btn"
             >
               Build Safe Transaction
             </button>

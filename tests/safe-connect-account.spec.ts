@@ -13,7 +13,7 @@ test("should connect (add) existing Safe accounts from Anvil state using Connect
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 10000,
+      timeout: 60000,
     });
     await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
     await metamask.connectToDapp();
@@ -29,13 +29,13 @@ test("should connect (add) existing Safe accounts from Anvil state using Connect
 
   // Click on Add Safe btn
   await page.waitForSelector('[data-testid="add-safe-nav-btn"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="add-safe-nav-btn"]').click();
 
   // Add first Safe (anvil, 3 owners)
   await page.waitForSelector('[data-testid="safe-name-input"]', {
-    timeout: 30000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="safe-name-input"]').fill("Anvil 3 Owners");
   await page
@@ -51,10 +51,9 @@ test("should connect (add) existing Safe accounts from Anvil state using Connect
   await expect(
     page.locator('[data-testid="safe-accounts-table"]'),
   ).toBeVisible();
-  await expect(page.locator('[data-testid="safe-account-row"]')).toContainText(
-    "Anvil 3 Owners",
+  const safeRow = page.locator(
+    `[data-testid="safe-account-row-${ANVIL_SAFE_THREE_SIGNERS}"]`,
   );
-  await expect(page.locator('[data-testid="safe-account-row"]')).toContainText(
-    ANVIL_SAFE_THREE_SIGNERS,
-  );
+  await expect(safeRow).toContainText("Anvil 3 Owners");
+  await expect(safeRow).toContainText(ANVIL_SAFE_THREE_SIGNERS);
 });

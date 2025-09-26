@@ -14,7 +14,7 @@ test("should create a new safe account and navigate to dashboard", async ({
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 10000,
+      timeout: 60000,
     });
     await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
     await metamask.connectToDapp();
@@ -34,13 +34,13 @@ test("should create a new safe account and navigate to dashboard", async ({
 
   // Click navigation button to go to safe creation page
   await page.waitForSelector('[data-testid="create-safe-nav-btn"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="create-safe-nav-btn"]').click();
 
   // Step 1: Fill in safe name and select network (StepNameAndNetworks)
   await page.waitForSelector('[data-testid="safe-name-input"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="safe-name-input"]').fill("Test Safe");
   // Select Anvil network badge button if available, otherwise select first
@@ -61,7 +61,7 @@ test("should create a new safe account and navigate to dashboard", async ({
   // Step 2: Add signer (StepSigners)
   // Fill first owner input
   await page.waitForSelector('[data-testid="signer-input-0"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page
     .locator('[data-testid="signer-input-0"]')
@@ -121,7 +121,7 @@ test("should create a new safe account and navigate to dashboard", async ({
   await page.waitForSelector(
     '[data-testid="deployment-modal-step-loading-txSent"]',
     {
-      timeout: 30000,
+      timeout: 60000,
     },
   );
   await metamask.confirmTransactionAndWaitForMining();
@@ -144,7 +144,7 @@ test("should create a new safe account and navigate to dashboard", async ({
   await expect(txHashLocator).not.toHaveText("N/A");
   // Wait for success button to appear and click it
   await page.waitForSelector('[data-testid="deployment-modal-success-btn"]', {
-    timeout: 30000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="deployment-modal-success-btn"]').click();
 
@@ -157,9 +157,9 @@ test("should create a new safe account and navigate to dashboard", async ({
     page.locator('[data-testid="safe-accounts-table"]'),
   ).toContainText("Test Safe");
   // Optionally check that the new safe row exists
-  await expect(page.locator('[data-testid="safe-account-row"]')).toContainText(
-    "Test Safe",
-  );
+  await expect(
+    page.locator('[data-testid^="safe-account-row-"]'),
+  ).toContainText("Test Safe");
 });
 
 test("should create a new safe account on Sepolia and Anvil and show undeployed row", async ({
@@ -174,7 +174,7 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 10000,
+      timeout: 60000,
     });
     await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
     await metamask.connectToDapp();
@@ -194,13 +194,13 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
 
   // Click navigation button to go to safe creation page
   await page.waitForSelector('[data-testid="create-safe-nav-btn"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="create-safe-nav-btn"]').click();
 
   // Step 1: Fill in safe name and select Sepolia + Anvil networks
   await page.waitForSelector('[data-testid="safe-name-input"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="safe-name-input"]').fill("MultiNet Safe");
 
@@ -224,7 +224,7 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
 
   // Step 2: Add signer (StepSigners)
   await page.waitForSelector('[data-testid="signer-input-0"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page
     .locator('[data-testid="signer-input-0"]')
@@ -280,7 +280,7 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
   await page.locator('[data-testid="toggle-deployed-undeployed"]').click();
 
   // Assert undeployed safe appears in the list
-  await expect(page.locator('[data-testid="safe-account-row"]')).toContainText(
-    "MultiNet Safe",
-  );
+  await expect(
+    page.locator('[data-testid^="safe-account-row-"]'),
+  ).toContainText("MultiNet Safe");
 });

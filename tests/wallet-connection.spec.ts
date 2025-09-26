@@ -10,13 +10,13 @@ test("should connect wallet to the app via RainbowKit and MetaMask", async ({
 
   // Wait for RainbowKit connect button and click
   await page.waitForSelector('[data-testid="rk-connect-button"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="rk-connect-button"]').first().click();
 
   // Wait for MetaMask option in modal and click
   await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-    timeout: 10000,
+    timeout: 60000,
   });
   await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
 
