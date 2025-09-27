@@ -129,7 +129,6 @@ test("should import SafeWallet data and restore accounts", async ({ page }) => {
   });
 
   expect(importedData.version).toBe(MOCK_SAFEWALLET_DATA.version);
-  console.log("Exported Data:", importedData.data);
   expect(
     importedData.data.addressBook["31337"][
       "0xe80f3c2046c04bf94b04ca142f94fbf7480110c7"

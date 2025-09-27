@@ -9,9 +9,9 @@ ANVIL_PID=$!
 trap "kill $ANVIL_PID" EXIT
 
 # Run E2E tests (Synpress and Playwright)
-pnpm exec synpress
+xvfb-run pnpm exec synpress
 if [ -z "$1" ]; then
-	pnpm exec playwright test
+	xvfb-run pnpm exec playwright test
 else
-	pnpm exec playwright test "$1"
+	xvfb-run pnpm exec playwright test "$1"
 fi
