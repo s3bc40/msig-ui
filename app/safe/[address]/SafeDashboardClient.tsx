@@ -17,6 +17,7 @@ import { ImportTxPreview, SafeDeployStep } from "@/app/utils/types";
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import Link from "next/link";
 import DeploymentModal from "@/app/components/DeploymentModal";
+import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
 
 export default function SafeDashboardClient({
   safeAddress,
@@ -129,6 +130,33 @@ export default function SafeDashboardClient({
   // Handler to go to builder page
   function handleGoToBuilder() {
     router.push(`/safe/${safeAddress}/new-tx`);
+  }
+
+  // Utility to handle Safe transaction import and state update
+  async function handleImportTx(
+    importPreview: ImportTxPreview | { error: string } | null,
+  ) {
+    if (
+      typeof importPreview === "object" &&
+      importPreview !== null &&
+      !("error" in importPreview)
+    ) {
+      try {
+        importTx(safeAddress, JSON.stringify(importPreview));
+        setShowImportModal(false);
+        setImportPreview(null);
+        // Optionally reload tx
+        const tx = await getSafeTransactionCurrent();
+        setCurrentTx(tx);
+        // Optionally update hash
+        if (kit && tx) {
+          const txHash = await kit.getTransactionHash(tx);
+          setCurrentTxHash(txHash || null);
+        }
+      } catch {
+        // Optionally show error toast
+      }
+    }
   }
 
   return (
@@ -258,82 +286,6 @@ export default function SafeDashboardClient({
                 }}
               />
             </div>
-            {/* Import Modal with preview and confirmation */}
-            {showImportModal && (
-              <div
-                className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black"
-                data-testid="safe-dashboard-import-tx-modal-root"
-              >
-                <div className="bg-base-100 w-full max-w-lg rounded p-6 shadow-lg">
-                  <h2
-                    className="mb-2 text-lg font-bold"
-                    data-testid="safe-dashboard-import-tx-modal-title"
-                  >
-                    Import Transaction JSON
-                  </h2>
-                  <div
-                    className="alert alert-warning mb-4 text-sm"
-                    data-testid="safe-dashboard-import-tx-modal-warning"
-                  >
-                    <span>
-                      <strong>Warning:</strong> This will replace your current
-                      transaction for this Safe. This action cannot be undone.
-                    </span>
-                  </div>
-                  <div
-                    className="bg-base-200 mb-4 w-full rounded border p-4 shadow"
-                    data-testid="safe-dashboard-import-tx-modal-preview"
-                  >
-                    <pre className="max-h-[40vh] overflow-y-auto font-mono text-xs break-words whitespace-pre-wrap">
-                      {typeof importPreview === "object" &&
-                      importPreview !== null
-                        ? JSON.stringify(importPreview, null, 2)
-                        : "No valid transaction data."}
-                    </pre>
-                  </div>
-                  <div
-                    className="flex justify-end gap-2"
-                    data-testid="safe-dashboard-import-tx-modal-actions"
-                  >
-                    <button
-                      className="btn btn-outline"
-                      data-testid="safe-dashboard-import-tx-modal-cancel-btn"
-                      onClick={() => setShowImportModal(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      data-testid="safe-dashboard-import-tx-modal-replace-btn"
-                      disabled={
-                        typeof importPreview !== "object" ||
-                        importPreview === null ||
-                        "error" in importPreview
-                      }
-                      onClick={async () => {
-                        try {
-                          importTx(safeAddress, JSON.stringify(importPreview));
-                          setShowImportModal(false);
-                          setImportPreview(null);
-                          // Optionally reload tx
-                          const tx = await getSafeTransactionCurrent();
-                          setCurrentTx(tx);
-                          // Optionally update hash
-                          if (kit && tx) {
-                            const txHash = await kit.getTransactionHash(tx);
-                            setCurrentTxHash(txHash || null);
-                          }
-                        } catch {
-                          // Optionally show error toast
-                        }
-                      }}
-                    >
-                      Replace
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
             {/* Status and actions logic */}
             {isLoading && (
               <div className="flex h-20 items-center justify-center">
@@ -404,7 +356,7 @@ export default function SafeDashboardClient({
         {currentTx && currentTxHash && (
           <AppCard
             title="Current Transaction"
-            data-testid="safe-dashboard-current-tx-card"
+            testid="safe-dashboard-current-tx-card"
           >
             <Link
               className="btn btn-accent btn-outline flex w-full items-center gap-4 rounded"
@@ -456,6 +408,16 @@ export default function SafeDashboardClient({
             ? handleCloseModal
             : undefined
         }
+      />
+      {/* Import Modal with preview and confirmation */}
+      <ImportSafeTxModal
+        open={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setImportPreview(null);
+        }}
+        importPreview={importPreview}
+        onReplace={async () => handleImportTx(importPreview)}
       />
     </AppSection>
   );

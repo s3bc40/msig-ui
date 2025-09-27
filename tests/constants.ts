@@ -63,3 +63,28 @@ export const MOCK_SAFEWALLET_DATA = {
     },
   },
 };
+
+// Mock SafeTx data for export/import tests
+export const MOCK_SAFE_TX_MAP = {
+  "0xe80f3c2046c04bf94b04ca142f94fbf7480110c7": {
+    data: {
+      to: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      value: "0",
+      data: "0x",
+      operation: 0,
+      baseGas: "0",
+      gasPrice: "0",
+      gasToken: "0x0000000000000000000000000000000000000000",
+      refundReceiver: "0x0000000000000000000000000000000000000000",
+      nonce: 1,
+      safeTxGas: "0",
+    },
+    signatures: [
+      {
+        signer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        data: "0x70cb1d77b77b30b27e1a9e85e19019fd5da7462fef466404085ff70b60e453061f94b3659c3805914c89f22b05b9bda81e9799c20eadd679dd3827d460bb2f241c",
+        isContractSignature: false,
+      },
+    ],
+  },
+};

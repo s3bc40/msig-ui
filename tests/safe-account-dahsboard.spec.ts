@@ -1,7 +1,9 @@
+import fs from "fs";
 import { testWithMetaMask as test } from "./fixtures/testWithMetamask";
 import {
   ANVIL_SAFE_THREE_SIGNERS,
   CHAIN_ID_ANVIL,
+  MOCK_SAFE_TX_MAP,
   MOCK_SAFEWALLET_DATA,
 } from "./constants";
 
@@ -69,4 +71,141 @@ test("should redirect to safe dashboard on click on account row", async ({
   await expect(
     page.locator('[data-testid="safe-dashboard-divider"]'),
   ).toBeVisible();
+});
+
+test("should export Safe transaction JSON and verify file content", async ({
+  page,
+}) => {
+  // Seed localStorage before page load with mock SafeTx data
+  await page.addInitScript(
+    ({ txMap }) => {
+      localStorage.setItem("MSIGUI_safeCurrentTxMap", JSON.stringify(txMap));
+    },
+    { txMap: MOCK_SAFE_TX_MAP },
+  );
+
+  await page.reload(); // Reload to ensure the init script takes effect
+
+  // Click the Safe row link for the correct chain/address
+  const safeRow = page.locator(
+    `[data-testid="safe-account-row-${ANVIL_SAFE_THREE_SIGNERS}"]`,
+  );
+  await safeRow.waitFor({ state: "visible" });
+  const collapseCheckbox = safeRow.locator(
+    '[data-testid="safe-account-collapse"]',
+  );
+  await collapseCheckbox.waitFor({ state: "visible" });
+  await collapseCheckbox.click();
+  const safeRowLink = safeRow.locator(
+    `[data-testid="safe-account-link-${ANVIL_SAFE_THREE_SIGNERS}-${CHAIN_ID_ANVIL}"]`,
+  );
+  await safeRowLink.waitFor({ state: "visible" });
+  await safeRowLink.click();
+
+  // Wait for dashboard to load
+  await expect(
+    page.locator('[data-testid="safe-dashboard-threshold"]'),
+  ).toBeVisible();
+
+  // Export transaction
+  const exportBtn = page.locator(
+    '[data-testid="safe-dashboard-export-tx-btn"]',
+  );
+  await exportBtn.waitFor({ state: "visible" });
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    exportBtn.click(),
+  ]);
+  const exportPath = await download.path();
+  expect(exportPath).toBeTruthy();
+
+  // Read the downloaded file
+  const fileContent = fs.readFileSync(exportPath, "utf-8");
+  const exportedTx = JSON.parse(fileContent);
+
+  // Assert exported transaction structure and values
+  expect(exportedTx).toHaveProperty("tx");
+  expect(exportedTx.tx.data.to).toBe(
+    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].data.to,
+  );
+  expect(exportedTx.tx.signatures[0].signer).toBe(
+    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer,
+  );
+});
+
+test("should import Safe transaction JSON and show in dashboard", async ({
+  page,
+}) => {
+  // Seed localStorage with empty SafeTx map before page load
+  await page.addInitScript(() => {
+    localStorage.setItem("MSIGUI_safeCurrentTxMap", JSON.stringify({}));
+  });
+
+  // Click the Safe row link for the correct chain/address
+  const safeRow = page.locator(
+    `[data-testid="safe-account-row-${ANVIL_SAFE_THREE_SIGNERS}"]`,
+  );
+  await safeRow.waitFor({ state: "visible" });
+  const collapseCheckbox = safeRow.locator(
+    '[data-testid="safe-account-collapse"]',
+  );
+  await collapseCheckbox.waitFor({ state: "visible" });
+  await collapseCheckbox.click();
+  const safeRowLink = safeRow.locator(
+    `[data-testid="safe-account-link-${ANVIL_SAFE_THREE_SIGNERS}-${CHAIN_ID_ANVIL}"]`,
+  );
+  await safeRowLink.waitFor({ state: "visible" });
+  await safeRowLink.click();
+
+  // Wait for dashboard to load
+  await expect(
+    page.locator('[data-testid="safe-dashboard-threshold"]'),
+  ).toBeVisible();
+
+  // Prepare a mock transaction file for import
+  const importFilePath = `/tmp/mock_safe_tx_import.json`;
+  fs.writeFileSync(
+    importFilePath,
+    JSON.stringify({
+      tx: MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS],
+    }),
+  );
+
+  // Import transaction
+  const importBtn = page.locator(
+    '[data-testid="safe-dashboard-import-tx-btn"]',
+  );
+  await importBtn.waitFor({ state: "visible" });
+  const importInput = page.locator(
+    '[data-testid="safe-dashboard-import-tx-input"]',
+  );
+  await importInput.setInputFiles(importFilePath);
+
+  // Wait for import modal to appear and confirm
+  const importModal = page.locator(
+    '[data-testid="safe-dashboard-import-tx-modal-root"]',
+  );
+  await importModal.waitFor({ state: "visible" });
+  const replaceBtn = importModal.locator(
+    '[data-testid="safe-dashboard-import-tx-modal-replace-btn"]',
+  );
+  await replaceBtn.click();
+  await importModal.waitFor({ state: "hidden" });
+
+  // Assert that the transaction is now present in the dashboard
+  await expect(
+    page.locator('[data-testid="safe-dashboard-current-tx-card"]'),
+  ).toBeVisible();
+
+  // Verify imported transaction data in localStorage
+  const importedTxMap = await page.evaluate(() => {
+    const raw = localStorage.getItem("MSIGUI_safeCurrentTxMap");
+    return JSON.parse(raw ?? "{}");
+  });
+  expect(importedTxMap[ANVIL_SAFE_THREE_SIGNERS].data.to).toBe(
+    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].data.to,
+  );
+  expect(importedTxMap[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer).toBe(
+    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer,
+  );
 });
