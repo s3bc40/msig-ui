@@ -3,7 +3,7 @@ import { testWithMetaMask as test } from "./fixtures/testWithMetamask";
 import {
   ANVIL_SAFE_THREE_SIGNERS,
   CHAIN_ID_ANVIL,
-  MOCK_SAFE_TX_MAP,
+  MOCK_SAFE_TX_SIGNED_MAP,
   MOCK_SAFEWALLET_DATA,
 } from "./constants";
 
@@ -81,7 +81,7 @@ test("should export Safe transaction JSON and verify file content", async ({
     ({ txMap }) => {
       localStorage.setItem("MSIGUI_safeCurrentTxMap", JSON.stringify(txMap));
     },
-    { txMap: MOCK_SAFE_TX_MAP },
+    { txMap: MOCK_SAFE_TX_SIGNED_MAP },
   );
 
   await page.reload(); // Reload to ensure the init script takes effect
@@ -126,10 +126,10 @@ test("should export Safe transaction JSON and verify file content", async ({
   // Assert exported transaction structure and values
   expect(exportedTx).toHaveProperty("tx");
   expect(exportedTx.tx.data.to).toBe(
-    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].data.to,
+    MOCK_SAFE_TX_SIGNED_MAP[ANVIL_SAFE_THREE_SIGNERS].data.to,
   );
   expect(exportedTx.tx.signatures[0].signer).toBe(
-    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer,
+    MOCK_SAFE_TX_SIGNED_MAP[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer,
   );
 });
 
@@ -167,7 +167,7 @@ test("should import Safe transaction JSON and show in dashboard", async ({
   fs.writeFileSync(
     importFilePath,
     JSON.stringify({
-      tx: MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS],
+      tx: MOCK_SAFE_TX_SIGNED_MAP[ANVIL_SAFE_THREE_SIGNERS],
     }),
   );
 
@@ -203,9 +203,9 @@ test("should import Safe transaction JSON and show in dashboard", async ({
     return JSON.parse(raw ?? "{}");
   });
   expect(importedTxMap[ANVIL_SAFE_THREE_SIGNERS].data.to).toBe(
-    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].data.to,
+    MOCK_SAFE_TX_SIGNED_MAP[ANVIL_SAFE_THREE_SIGNERS].data.to,
   );
   expect(importedTxMap[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer).toBe(
-    MOCK_SAFE_TX_MAP[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer,
+    MOCK_SAFE_TX_SIGNED_MAP[ANVIL_SAFE_THREE_SIGNERS].signatures[0].signer,
   );
 });
