@@ -320,7 +320,7 @@ export default function TxDetailsClient() {
                     router.push(`/safe/${safeAddress}`);
                   }}
                   successLabel="Back to Safe"
-                  data-testid="tx-details-broadcast-modal"
+                  testid="tx-details-broadcast-modal"
                 />
               )}
             </>

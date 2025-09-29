@@ -2,9 +2,7 @@ import { testWithSynpress } from "@synthetixio/synpress";
 import { MetaMask, metaMaskFixtures } from "@synthetixio/synpress/playwright";
 import basicSetup from "@/test/wallet-setup/basic.setup";
 
-export const testWithMetaMask = testWithSynpress(
-  metaMaskFixtures(basicSetup),
-).extend<{
+export const test = testWithSynpress(metaMaskFixtures(basicSetup)).extend<{
   metamask: MetaMask;
 }>({
   metamask: async ({ context, metamaskPage, extensionId }, run) => {

@@ -1,11 +1,11 @@
 import fs from "fs";
-import { testWithMetaMask as test } from "./fixtures/testWithMetamask";
+import { test } from "./utils/fixture";
 import {
   ANVIL_SAFE_THREE_SIGNERS,
   CHAIN_ID_ANVIL,
   MOCK_SAFE_TX_SIGNED_MAP,
   MOCK_SAFEWALLET_DATA,
-} from "./constants";
+} from "./utils/constants";
 
 const { expect } = test;
 

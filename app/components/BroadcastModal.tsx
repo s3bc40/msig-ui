@@ -10,6 +10,7 @@ export interface BroadcastModalProps {
   closeLabel?: string;
   onSuccess?: () => void;
   successLabel?: string;
+  testid?: string;
 }
 
 const BroadcastModal: React.FC<BroadcastModalProps> = ({
@@ -21,6 +22,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
   closeLabel = "Close",
   onSuccess,
   successLabel = "Back to Safe",
+  testid = "broadcast-modal",
 }) => {
   if (!open) return null;
   return (
@@ -28,6 +30,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
       id="broadcast_modal"
       className="modal modal-bottom sm:modal-middle"
       open
+      data-testid={testid}
     >
       <div className="modal-box flex !max-w-2xl flex-col gap-6 p-8">
         <div className="text-base-content font-bold">
@@ -36,7 +39,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
 
         <div className="mb-4">
           {txHash && (
-            <div className="mt-2">
+            <div className="mt-2" data-testid="broadcast-modal-txhash-row">
               <span className="font-semibold">Transaction Hash:</span>
               {blockExplorerUrl ? (
                 <a
@@ -44,26 +47,38 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link link-primary ml-2"
+                  data-testid="broadcast-modal-txhash-link"
                 >
                   <AppAddress address={txHash} className="text-xs" />
                 </a>
               ) : (
-                <AppAddress address={txHash} className="ml-2 text-xs" />
+                <AppAddress
+                  address={txHash}
+                  className="ml-2 text-xs"
+                  testid="broadcast-modal-txhash"
+                />
               )}
             </div>
           )}
           {error && (
-            <div className="alert alert-error mt-4 w-full max-w-full overflow-x-auto break-words">
+            <div
+              className="alert alert-error mt-4 w-full max-w-full overflow-x-auto break-words"
+              data-testid="broadcast-modal-error-row"
+            >
               <pre className="text-xs whitespace-pre-wrap">{error}</pre>
             </div>
           )}
         </div>
-        <div className="flex justify-center gap-4">
+        <div
+          className="flex justify-center gap-4"
+          data-testid="broadcast-modal-actions"
+        >
           {onSuccess && successLabel && !error ? (
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => onSuccess()}
+              data-testid="broadcast-modal-success-btn"
             >
               {successLabel}
             </button>
@@ -73,6 +88,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
               disabled={!error}
               className="btn btn-secondary"
               onClick={onClose}
+              data-testid="broadcast-modal-close-btn"
             >
               {closeLabel}
             </button>

@@ -1,4 +1,5 @@
 // Import necessary Synpress modules
+import { ANVIL_MM_ACCOUNTS } from "@/tests/utils/constants";
 import { defineWalletSetup } from "@synthetixio/synpress";
 import { MetaMask } from "@synthetixio/synpress/playwright";
 
@@ -23,19 +24,8 @@ export default defineWalletSetup(PASSWORD, async (context, walletPage) => {
     symbol: "ETH",
   });
 
-  // Add all test accounts from Anvil (first is already imported via seed phrase)
-  const anvilAccounts = [
-    "Account 2",
-    "Account 3",
-    "Account 4",
-    "Account 5",
-    "Account 6",
-    "Account 7",
-    "Account 8",
-    "Account 9",
-    "Account 10",
-  ];
-  for (const accountName of anvilAccounts) {
+  // Predefined Anvil accounts to add
+  for (const accountName of ANVIL_MM_ACCOUNTS.slice(1)) {
     await metamask.addNewAccount(accountName);
   }
   // Switch to Account 1 (the first account in the seed phrase)

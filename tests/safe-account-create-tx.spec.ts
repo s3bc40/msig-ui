@@ -1,5 +1,5 @@
-import { testWithMetaMask as test } from "./fixtures/testWithMetamask";
-import { MOCK_SAFEWALLET_DATA } from "./constants";
+import { test } from "./utils/fixture";
+import { MOCK_SAFEWALLET_DATA } from "./utils/constants";
 
 const { expect } = test;
 

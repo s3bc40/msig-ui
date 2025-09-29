@@ -1,5 +1,5 @@
-import { ANVIL_SAFE_THREE_SIGNERS } from "./constants";
-import { testWithMetaMask as test } from "./fixtures/testWithMetamask";
+import { ANVIL_SAFE_THREE_SIGNERS } from "./utils/constants";
+import { test } from "./utils/fixture";
 
 const { expect } = test;
 

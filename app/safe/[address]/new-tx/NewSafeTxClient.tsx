@@ -115,15 +115,25 @@ export default function NewSafeTxClient() {
       setError("Invalid recipient address format.");
       return;
     }
+    if (isNaN(Number(value)) || Number(value) < 0) {
+      setError("Value must be a non-negative number.");
+      return;
+    }
+    const dataHex = data.trim();
+    let methodLabel = "Transfer";
+    if (dataHex) {
+      methodLabel = "Custom hex";
+    } else if (abiJson && abiMethods.length > 0 && selectedMethod) {
+      methodLabel = selectedMethod;
+    }
     // Add transaction to the list
     setTransactions((txs) => [
       ...txs,
       {
         to: toAddr,
-        value: value.trim(),
-        data: data.trim(),
-        method: selectedMethod,
-        // You can add operation or other fields as needed
+        value: value,
+        data: dataHex,
+        method: methodLabel,
       },
     ]);
     // Reset form fields
@@ -182,7 +192,7 @@ export default function NewSafeTxClient() {
                 className="fieldset"
                 data-testid="new-safe-tx-value-fieldset"
               >
-                <legend className="fieldset-legend">Value (ETH)</legend>
+                <legend className="fieldset-legend">Value (wei)</legend>
                 <input
                   className="input input-bordered w-full"
                   value={value}
