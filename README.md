@@ -78,7 +78,10 @@ A web interface for managing multisignature wallets inspired by SafeWallet and E
 
 ```bash
   pnpm exec synpress
+  # pnpm exec synpress --force  # use this if you switch environments (devcontainer vs local)
 ```
+
+_Note: you may need to start anvil in another terminal with `anvil` if you see errors about MetaMask not being able to connect to the network. After completion you can close it._
 
 5. To run the E2E tests in headless mode (default):
 
@@ -180,6 +183,7 @@ expect(exportedJson).toContain("expected data");
 - E2E tests require manual cache management when switching environments.
 - For local contract deployment, see the instructions below.
 - Ensure `.cache-synpress` is built for the environment you are using (devcontainer vs local). Else you may face issues with Synpress not finding MetaMask extension. Please refresh the cache by running `pnpm exec synpress --force` again if you switch environments.
+- Sometimes some `next-server` and `anvil` processes may remain running in the background. Please kill them if you face weird issues.
 
 ## Deploying Safe Contracts Locally with `safe-smart-account`
 
