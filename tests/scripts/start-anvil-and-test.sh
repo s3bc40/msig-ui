@@ -21,8 +21,8 @@ if [ "$USE_XVFB" -eq 1 ]; then
   ANVIL_PID=$!
 
   trap "kill $ANVIL_PID" EXIT
-  xvfb-run pnpm exec synpress
-  xvfb-run pnpm exec playwright test "${ARGS[@]}"
+  xvfb-run --auto-servernum pnpm exec synpress
+  xvfb-run --auto-servernum pnpm exec playwright test "${ARGS[@]}"
 else
   # You need to run anvil manually in another terminal if using --ui
   # useful if you need to restart anvil without restarting tests

@@ -16,5 +16,5 @@
     }
   },
   "remoteUser": "ubuntu",
-  "postCreateCommand": "pnpm install && xvfb-run pnpm exec playwright install && xvfb-run pnpm exec synpress"
+  "postCreateCommand": "pnpm install && xvfb-run pnpm exec playwright install && anvil --chain-id 31337 > /dev/null 2>&1 & ANVIL_PID=$! && sleep 2 && xvfb-run pnpm exec synpress --force && kill $ANVIL_PID"
 }

@@ -1,17 +1,21 @@
 # MSIG UI
 
-A web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet.
+A web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. This is a 100% local safe wallet with multisig support, import/export, and transaction workflows.
 
-## Project Objective
-
-Create a 100% local safe wallet with multisig support, import/export, and transaction workflows.
-
-## SafeWallet Inspiration & Libraries
-
-This project is heavily inspired by SafeWallet from the Safe team. We use their official libraries:
-
-- `@safe-global/protocol-kit`: Utility to interact with Safe contracts onchain (create, sign, execute transactions, fetch Safe info).
-- `@safe-global/safe-deployments`: Provides deployment addresses for Safe contracts on various networks.
+- [MSIG UI](#msig-ui)
+  - [Features](#features)
+  - [Quickstart](#quickstart)
+    - [Requirements](#requirements)
+    - [Running the dev server](#running-the-dev-server)
+    - [Running E2E Tests](#running-e2e-tests)
+    - [Run MSIG UI with Production Build](#run-msig-ui-with-production-build)
+    - [Anvil State Management: --dump-state \& --load-state](#anvil-state-management---dump-state----load-state)
+    - [Example: Test Runner Script](#example-test-runner-script)
+    - [Example: Playwright Test (export)](#example-playwright-test-export)
+  - [Developer Notes](#developer-notes)
+  - [Deploying Safe Contracts Locally with `safe-smart-account`](#deploying-safe-contracts-locally-with-safe-smart-account)
+  - [TODO](#todo)
+  - [References](#references)
 
 ## Features
 
@@ -22,137 +26,78 @@ This project is heavily inspired by SafeWallet from the Safe team. We use their 
 - **Wallet Connection**: MetaMask and RainbowKit integration.
 - **Client-Side State**: All wallet and transaction logic is handled client-side using wagmi, RainbowKit, and Safe Protocol Kit.
 
-## Project Structure
+## Quickstart
+
+### Requirements
+
+- Node.js v18+
+- pnpm
+- Anvil (for E2E tests)
+
+### Running the dev server
+
+1. Install [pnpm](https://pnpm.io/installation).
+
+2. Clone the repository and install dependencies:
 
 ```bash
-app/
-  components/
-    AppAddress.tsx
-    AppCard.tsx
-    AppSection.tsx
-    BtnCancel.tsx
-    DeploymentModal.tsx
-    ImportSafeTxModal.tsx
-    ImportSafeWalletModal.tsx
-    Modal.tsx
-    NavBar.tsx
-    SafeDetails.tsx
-    ...
-  hooks/
-    useSafe.ts
-    useNewSafe.ts
-  provider/
-    SafeTxProvider.tsx
-    SafeWalletProvider.tsx
-  safe/
-    [address]/
-      SafeDashboardClient.tsx
-      new-tx/
-        NewSafeTxClient.tsx
-      tx/
-        [txHash]/
-          TxDetailsClient.tsx
-  accounts/
-    AccountsSafeClient.tsx
-  utils/
-    constants.ts
-    types.ts
-    helpers.ts
-...
-tests/
-  safe-account-dahsboard.spec.ts
-  safe-wallet-export-import.spec.ts
-  safe-account-create-tx.spec.ts
-  fixtures/
-    testWithMetamask.ts
-  scripts/
-    start-anvil-and-test.sh
-...
-.devcontainer/
-  Dockerfile
-  devcontainer.json
+  git clone https://github.com/s3bc40/msig-ui
+  cd msig-ui
+  pnpm install
 ```
 
-## Data & State Management
+3. Create a `.env` file in the root (take `.env.example` as a reference):
 
-- The app is primarily client-side due to wagmi and RainbowKit.
-- All Safe and wallet data is managed in React state and localStorage.
-- No server-side rendering or TanStack Query cache hydration is used.
-- Address book, Safe accounts, and transactions are stored locally and can be imported/exported as JSON.
-
-### Example: Export Safe Transaction
-
-```tsx
-// In SafeDashboardClient.tsx
-<button
-  className="btn btn-primary btn-outline btn-sm"
-  data-testid="safe-dashboard-export-tx-btn"
-  onClick={() => {
-    if (!currentTx) return;
-    try {
-      const json = exportTx(safeAddress);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `safe-tx.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // Optionally show error toast
-    }
-  }}
-  title="Export transaction JSON to file"
-  disabled={!currentTx}
->
-  Export Tx
-</button>
+```ini
+  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+  NEXT_PUBLIC_ETH_SEPOLIA_RPC_URL=your_sepolia_rpc_url
+  NEXT_PUBLIC_OP_SEPOLIA_RPC_URL=your_optimism_sepolia_rpc_url
 ```
 
-### Example: Import Safe Transaction Modal
+4. Start the development server:
 
-```tsx
-// Usage of ImportSafeTxModal in SafeDashboardClient.tsx
-<ImportSafeTxModal
-  open={showImportModal}
-  onClose={() => {
-    setShowImportModal(false);
-    setImportPreview(null);
-  }}
-  importPreview={importPreview}
-  onReplace={async () => handleImportTx(importPreview)}
-/>
+```bash
+  pnpm dev
 ```
 
-## Devcontainer Setup
+5. Open your browser and navigate to `http://localhost:3000`.
 
-- Uses the official Playwright base image for browser automation.
-- Installs Xvfb for virtual display (headed browser UI is WIP and may not work reliably).
-- All dependencies are installed for the non-root user to avoid permission issues.
-- Foundry/anvil is installed for local Ethereum testing.
-- See `.devcontainer/Dockerfile` and `.devcontainer/devcontainer.json` for details.
+### Running E2E Tests
 
-**Note:**  
-When switching between local and devcontainer environments, developers must manually reset the `.cache-synpress` directory before running tests to avoid browser/extension cache conflicts.
+1. Ensure you have [Anvil](https://getfoundry.sh/) installed and updated.
 
-### Example: Devcontainer Dockerfile (snippet)
+2. You follow the steps above to clone the repo, install dependencies, and create a `.env` file.
 
-```dockerfile
-FROM mcr.microsoft.com/playwright:v1.48.2-noble
-# ...
-RUN apt-get update && apt-get install -y xvfb
-# ...
-USER ubuntu
-RUN corepack enable && corepack prepare pnpm@latest --activate
-# ...
+3. We need to install Playwright dependencies for E2E tests:
+
+```bash
+  pnpm exec playwright install --with-deps
 ```
 
-## E2E Testing
+4. Execute synpress once to set up its cache:
+
+```bash
+  pnpm exec synpress
+```
+
+5. To run the E2E tests in headless mode (default):
+
+```bash
+  pnpm run test:e2e
+```
 
 - Tests are written using Synpress (MetaMask automation) and Playwright.
 - Test scripts are located in `tests/` and cover Safe account creation, dashboard, wallet import/export, and transaction workflows.
 - The test runner script (`tests/scripts/start-anvil-and-test.sh`) starts Anvil, runs Synpress, and then Playwright tests.
-- UI-based tests in the devcontainer are a work in progress; headed mode may not display correctly due to Xvfb/browser limitations.
+- UI-based tests in the devcontainer are a work in progress; headed mode may not display correctly due to Xvfb/browser limitations.But headless tests should work fine.
+
+### Run MSIG UI with Production Build
+
+To run the app with a production build locally and run the optimized version:
+
+```bash
+  pnpm run msig
+```
 
 ### Anvil State Management: --dump-state & --load-state
 
@@ -177,17 +122,42 @@ To ensure deterministic E2E tests, we use Anvil’s state management:
 ### Example: Test Runner Script
 
 ```bash
+echo "[E2E] Running E2E tests with Anvil"
 #!/bin/bash
 set -e
 
-# Start Anvil in the background
-anvil --load-state ./anvil-safe-state.json --block-time 1 > /dev/null 2>&1 &
-ANVIL_PID=$!
-trap "kill $ANVIL_PID" EXIT
-
 # Run E2E tests (Synpress and Playwright)
-pnpm exec synpress
-xvfb-run pnpm exec playwright test
+USE_XVFB=1
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" == "--ui" ]; then
+    USE_XVFB=0
+  fi
+  ARGS+=("$arg")
+done
+
+if [ "$USE_XVFB" -eq 1 ]; then
+  echo "[E2E] Running in headless mode (xvfb)"
+  echo "[E2E] Starting Anvil in the background..."
+  echo ""
+  # Start Anvil in the background
+  anvil --load-state ./anvil-safe-state.json --block-time 1 > /dev/null 2>&1 &
+  ANVIL_PID=$!
+
+  trap "kill $ANVIL_PID" EXIT
+  xvfb-run --auto-servernum pnpm exec synpress
+  xvfb-run --auto-servernum pnpm exec playwright test "${ARGS[@]}"
+else
+  # You need to run anvil manually in another terminal if using --ui
+  # useful if you need to restart anvil without restarting tests
+  echo "[E2E] Running in UI mode (--ui)"
+  echo "[E2E] Ensure Anvil is running in another terminal:"
+  echo "      pnpm run anvil"
+  echo ""
+  pnpm exec synpress
+  pnpm exec playwright test "${ARGS[@]}"
+fi
+
 ```
 
 ### Example: Playwright Test (export)
@@ -247,6 +217,21 @@ To run your own local Safe contracts for development, follow these steps:
 > **Note:**
 > Currently, contract addresses are manually maintained in `localContractNetworks.ts`. In the future, we may automate this process or use environment variables for better flexibility.
 
+## TODO
+
+- [ ] Let user remove current transaction from Safe dashboard.
+- [ ] Improve devcontainer setup for E2E tests; currently, UI mode has limitations.
+- [ ] Add support for more chains other than testnets if everything works well.
+- [ ] Add support to connect Safe wallet to other dApps with WalletConnect.
+- [ ] Adapted for SafeWallet@1.4.1-3 contracts; need to adapt to any versions.
+- [ ] Automate `version` value in `DEFAULT_SAFE_WALLET_DATA` constant (`app/utils/constants.ts` hardcoded to `3.0.0` now).
+- [ ] Ensure responsiveness of UI on every screen size.
+- [ ] Optimize reactivity from first batch of code.
+- [ ] Add more detailed error handling and user feedback (tooltips, notifications).
+- [ ] Add more comments and documentation in code.
+- [ ] Tests with other wallets like WalletConnect, Coinbase Wallet, Phantom, etc.
+- [ ] Improve E2E test reliability and coverage.
+
 ## References
 
 - [SafeSDK: Protocol Kit](https://docs.safe.global/sdk/protocol-kit)
@@ -254,3 +239,11 @@ To run your own local Safe contracts for development, follow these steps:
 - [RainbowKit](https://www.rainbowkit.com/)
 - [Synpress](https://docs.synpress.io/)
 - [Playwright](https://playwright.dev/)
+
+## Contributors
+
+Special thanks to all contributors!
+
+<a href="https://github.com/s3bc40/msig-ui/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=s3bc40/msig-ui" />
+</a>
