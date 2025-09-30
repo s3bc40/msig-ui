@@ -179,6 +179,7 @@ expect(exportedJson).toContain("expected data");
 - The project structure is modular, with reusable components and hooks.
 - E2E tests require manual cache management when switching environments.
 - For local contract deployment, see the instructions below.
+- Ensure `.cache-synpress` is built for the environment you are using (devcontainer vs local). Else you may face issues with Synpress not finding MetaMask extension. Please refresh the cache by running `pnpm exec synpress --force` again if you switch environments.
 
 ## Deploying Safe Contracts Locally with `safe-smart-account`
 
