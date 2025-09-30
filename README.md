@@ -1,17 +1,16 @@
 # MSIG UI
 
-A web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet.
+A web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. This is a 100% local safe wallet with multisig support, import/export, and transaction workflows.
 
-## Project Objective
-
-Create a 100% local safe wallet with multisig support, import/export, and transaction workflows.
-
-## SafeWallet Inspiration & Libraries
-
-This project is heavily inspired by SafeWallet from the Safe team. We use their official libraries:
-
-- `@safe-global/protocol-kit`: Utility to interact with Safe contracts onchain (create, sign, execute transactions, fetch Safe info).
-- `@safe-global/safe-deployments`: Provides deployment addresses for Safe contracts on various networks.
+- [MSIG UI](#msig-ui)
+  - [Features](#features)
+  - [Quickstart](#quickstart)
+    - [Anvil State Management: --dump-state \& --load-state](#anvil-state-management---dump-state----load-state)
+    - [Example: Test Runner Script](#example-test-runner-script)
+    - [Example: Playwright Test (export)](#example-playwright-test-export)
+  - [Developer Notes](#developer-notes)
+  - [Deploying Safe Contracts Locally with `safe-smart-account`](#deploying-safe-contracts-locally-with-safe-smart-account)
+  - [References](#references)
 
 ## Features
 
@@ -22,137 +21,14 @@ This project is heavily inspired by SafeWallet from the Safe team. We use their 
 - **Wallet Connection**: MetaMask and RainbowKit integration.
 - **Client-Side State**: All wallet and transaction logic is handled client-side using wagmi, RainbowKit, and Safe Protocol Kit.
 
-## Project Structure
+## Quickstart
 
-```bash
-app/
-  components/
-    AppAddress.tsx
-    AppCard.tsx
-    AppSection.tsx
-    BtnCancel.tsx
-    DeploymentModal.tsx
-    ImportSafeTxModal.tsx
-    ImportSafeWalletModal.tsx
-    Modal.tsx
-    NavBar.tsx
-    SafeDetails.tsx
-    ...
-  hooks/
-    useSafe.ts
-    useNewSafe.ts
-  provider/
-    SafeTxProvider.tsx
-    SafeWalletProvider.tsx
-  safe/
-    [address]/
-      SafeDashboardClient.tsx
-      new-tx/
-        NewSafeTxClient.tsx
-      tx/
-        [txHash]/
-          TxDetailsClient.tsx
-  accounts/
-    AccountsSafeClient.tsx
-  utils/
-    constants.ts
-    types.ts
-    helpers.ts
-...
-tests/
-  safe-account-dahsboard.spec.ts
-  safe-wallet-export-import.spec.ts
-  safe-account-create-tx.spec.ts
-  fixtures/
-    testWithMetamask.ts
-  scripts/
-    start-anvil-and-test.sh
-...
-.devcontainer/
-  Dockerfile
-  devcontainer.json
 ```
-
-## Data & State Management
-
-- The app is primarily client-side due to wagmi and RainbowKit.
-- All Safe and wallet data is managed in React state and localStorage.
-- No server-side rendering or TanStack Query cache hydration is used.
-- Address book, Safe accounts, and transactions are stored locally and can be imported/exported as JSON.
-
-### Example: Export Safe Transaction
-
-```tsx
-// In SafeDashboardClient.tsx
-<button
-  className="btn btn-primary btn-outline btn-sm"
-  data-testid="safe-dashboard-export-tx-btn"
-  onClick={() => {
-    if (!currentTx) return;
-    try {
-      const json = exportTx(safeAddress);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `safe-tx.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // Optionally show error toast
-    }
-  }}
-  title="Export transaction JSON to file"
-  disabled={!currentTx}
->
-  Export Tx
-</button>
+git clone https://github.com/s3bc40/msig-ui
+cd msig-ui
+pnpm install 
+pnpm run dev
 ```
-
-### Example: Import Safe Transaction Modal
-
-```tsx
-// Usage of ImportSafeTxModal in SafeDashboardClient.tsx
-<ImportSafeTxModal
-  open={showImportModal}
-  onClose={() => {
-    setShowImportModal(false);
-    setImportPreview(null);
-  }}
-  importPreview={importPreview}
-  onReplace={async () => handleImportTx(importPreview)}
-/>
-```
-
-## Devcontainer Setup
-
-- Uses the official Playwright base image for browser automation.
-- Installs Xvfb for virtual display (headed browser UI is WIP and may not work reliably).
-- All dependencies are installed for the non-root user to avoid permission issues.
-- Foundry/anvil is installed for local Ethereum testing.
-- See `.devcontainer/Dockerfile` and `.devcontainer/devcontainer.json` for details.
-
-**Note:**  
-When switching between local and devcontainer environments, developers must manually reset the `.cache-synpress` directory before running tests to avoid browser/extension cache conflicts.
-
-### Example: Devcontainer Dockerfile (snippet)
-
-```dockerfile
-FROM mcr.microsoft.com/playwright:v1.48.2-noble
-# ...
-RUN apt-get update && apt-get install -y xvfb
-# ...
-USER ubuntu
-RUN corepack enable && corepack prepare pnpm@latest --activate
-# ...
-```
-
-## E2E Testing
-
-- Tests are written using Synpress (MetaMask automation) and Playwright.
-- Test scripts are located in `tests/` and cover Safe account creation, dashboard, wallet import/export, and transaction workflows.
-- The test runner script (`tests/scripts/start-anvil-and-test.sh`) starts Anvil, runs Synpress, and then Playwright tests.
-- UI-based tests in the devcontainer are a work in progress; headed mode may not display correctly due to Xvfb/browser limitations.
 
 ### Anvil State Management: --dump-state & --load-state
 
