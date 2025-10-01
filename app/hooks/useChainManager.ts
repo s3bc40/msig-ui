@@ -53,7 +53,7 @@ export async function detectChainFromRpc(
 }
 
 export function useChainManager() {
-  const { configChains, addChain, removeChain } = useWagmiConfigContext();
+  const { configChains, setConfigChains } = useWagmiConfigContext();
   const [error, setError] = useState<string | null>(null);
   const [detectedChain, setDetectedChain] =
     useState<DetectedChainResult | null>(null);
@@ -61,13 +61,15 @@ export function useChainManager() {
 
   // Add or update a chain
   const addOrUpdateChain = (chain: Chain) => {
-    addChain(chain); // Provider logic deduplicates by id
+    setConfigChains((prev) => {
+      const filtered = prev.filter((c) => c.id !== chain.id);
+      return [...filtered, chain];
+    });
   };
 
   // Remove a chain by id
   const removeChainById = (chainId: number) => {
-    const chain = configChains.find((chain) => chain.id === chainId);
-    if (chain) removeChain(chain);
+    setConfigChains((prev) => prev.filter((c) => c.id !== chainId));
   };
 
   // Detect chain from RPC

@@ -49,7 +49,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
   const [error, setError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [hasSigned, setHasSigned] = useState(false);
-  const [readOnly, setReadOnly] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
 
   // Get Safe info from context
@@ -91,7 +90,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
       setSafeInfo(null);
       kitRef.current = null;
       setIsOwner(false);
-      setReadOnly(true);
       setUnavailable(false);
       setIsLoading(false);
       return;
@@ -104,7 +102,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
         setSafeInfo(null);
         kitRef.current = null;
         setIsOwner(false);
-        setReadOnly(true);
         setUnavailable(true);
         setIsLoading(false);
         return;
@@ -124,11 +121,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
         kitRef.current = null;
         setIsOwner(
           undeployedSafe.props.safeAccountConfig.owners.includes(
-            signer as `0x${string}`,
-          ),
-        );
-        setReadOnly(
-          !undeployedSafe.props.safeAccountConfig.owners.includes(
             signer as `0x${string}`,
           ),
         );
@@ -163,7 +155,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
             nonce,
           });
           setIsOwner(await kit.isOwner(signer as `0x${string}`));
-          setReadOnly(!(await kit.isOwner(signer as `0x${string}`)));
           setUnavailable(false);
         } catch (e: unknown) {
           if (e instanceof Error) {
@@ -174,14 +165,12 @@ export default function useSafe(safeAddress: `0x${string}`) {
           setSafeInfo(null);
           kitRef.current = null;
           setIsOwner(false);
-          setReadOnly(true);
           setUnavailable(true);
         }
       } else {
         setSafeInfo(null);
         kitRef.current = null;
         setIsOwner(false);
-        setReadOnly(true);
         setUnavailable(true);
       }
       setIsLoading(false);
@@ -421,7 +410,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
     error,
     isOwner,
     hasSigned,
-    readOnly,
     unavailable,
     buildSafeTransaction,
     validateSafeTransaction,
