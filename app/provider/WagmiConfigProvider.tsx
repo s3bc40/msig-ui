@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Chain } from "wagmi/chains";
 import { WAGMI_CONFIG_NETWORKS_KEY } from "../utils/constants";
 import { WagmiProvider } from "wagmi";
@@ -58,14 +64,17 @@ export const WagmiConfigProvider: React.FC<{
   }, [configChains]);
 
   // Compute wagmi config from chains
-  const wagmiConfig = getDefaultConfig({
-    appName: "MSIG UI",
-    projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-    chains: configChains as [typeof mainnet, ...[typeof mainnet]],
-    ssr: false,
-  });
-
-  const queryClient = new QueryClient();
+  const wagmiConfig = useMemo(
+    () =>
+      getDefaultConfig({
+        appName: "MSIG UI",
+        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+        chains: configChains as [typeof mainnet, ...[typeof mainnet]],
+        ssr: false,
+      }),
+    [configChains],
+  );
+  const [queryClient] = useState(() => new QueryClient());
 
   return (
     <WagmiConfigContext.Provider
@@ -74,6 +83,7 @@ export const WagmiConfigProvider: React.FC<{
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider
+            initialChain={1}
             theme={{
               lightMode: lightTheme({
                 accentColor: "#605dff",

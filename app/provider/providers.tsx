@@ -1,14 +1,8 @@
 import { SafeWalletProvider } from "./SafeWalletProvider";
 import { SafeTxProvider } from "./SafeTxProvider";
 import { WagmiConfigProvider } from "./WagmiConfigProvider";
-import { State } from "wagmi";
 
-export default function Providers({
-  children,
-}: {
-  children: React.ReactNode;
-  initialState?: State;
-}) {
+export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiConfigProvider>
       <SafeWalletProvider>
