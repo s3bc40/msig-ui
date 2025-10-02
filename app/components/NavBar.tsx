@@ -14,7 +14,7 @@ export default function NavBar() {
   const handleCloseNetworkModal = () => setNetworkModalOpen(false);
 
   return (
-    <nav className="navbar bg-base-200 border-base-100 sticky top-0 z-20 w-full justify-between border-b">
+    <nav className="navbar bg-base-200 border-base-100 sticky top-0 z-20 w-full justify-between border-b px-4">
       <div className="flex items-center">
         <Link
           className="mx-2 px-2 text-sm font-bold sm:text-xl"

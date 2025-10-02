@@ -42,7 +42,9 @@ export default function Modal({
       </div>
       {closeOnClickOutside && (
         <form method="dialog" className="modal-backdrop">
-          <button onClick={onClose}>close</button>
+          <button type="reset" onClick={onClose}>
+            close
+          </button>
         </form>
       )}
     </dialog>

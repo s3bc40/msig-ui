@@ -42,11 +42,15 @@ export async function detectChainFromRpc(
       isCustom: false,
     };
   } else {
+    // Always return a valid Chain type
+    const customChain: Chain = createChain({
+      id: chainId,
+      name: `Custom Chain ${chainId}`,
+      nativeCurrency: { name: "Unknown", symbol: "UNKNOWN", decimals: 18 },
+      rpcUrl: rpcUrl,
+    });
     return {
-      chain: {
-        id: chainId,
-        rpcUrls: { default: { http: [rpcUrl] } },
-      },
+      chain: customChain,
       isCustom: true,
     };
   }

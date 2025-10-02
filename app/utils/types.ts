@@ -157,6 +157,30 @@ export interface CustomChainInput {
 
 // Detected Chain Result type
 export type DetectedChainResult = {
-  chain: Chain | { id: number; rpcUrls: { default: { http: string[] } } };
+  chain: Chain;
   isCustom: boolean;
 };
+
+// Form state for custom network modal
+export interface NetworkFormState {
+  rpcUrl: string;
+  name: string;
+  id: string | number;
+  blockExplorerUrl?: string;
+  blockExplorerName?: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+}
+
+// Default form state for custom network modal
+export type FormAction =
+  | { type: "update"; key: keyof NetworkFormState; value: string | number }
+  | {
+      type: "updateCurrency";
+      currencyKey: keyof NetworkFormState["nativeCurrency"];
+      currencyValue: string | number;
+    }
+  | { type: "reset" };

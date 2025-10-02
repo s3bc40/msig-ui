@@ -131,14 +131,6 @@ export const SafeWalletProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  // const importSafeWalletData = (data: SafeWalletData) => {
-  //   setSafeWalletData(data);
-  // };
-
-  // const exportSafeWalletData = () => {
-  //   return JSON.stringify(safeWalletData, null, 2);
-  // };
-
   return (
     <SafeWalletContext.Provider
       value={{
