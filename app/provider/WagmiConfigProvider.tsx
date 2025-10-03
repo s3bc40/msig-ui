@@ -83,7 +83,6 @@ export const WagmiConfigProvider: React.FC<{
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider
-            initialChain={1}
             theme={{
               lightMode: lightTheme({
                 accentColor: "#605dff",
