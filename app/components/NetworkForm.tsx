@@ -297,7 +297,7 @@ export default function NetworkForm({
           )}
         </fieldset>
         <fieldset
-          className={`fieldset flex-1${chainIdMismatch ? "border-warning" : ""}`}
+          className={`fieldset flex-1${chainIdMismatch ? " border-warning" : ""}`}
         >
           <legend className="fieldset-legend">Chain ID</legend>
           <input
