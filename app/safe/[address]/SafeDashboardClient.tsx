@@ -33,7 +33,6 @@ export default function SafeDashboardClient({
     isLoading,
     error,
     isOwner,
-    readOnly,
     unavailable,
     kit,
     deployUndeployedSafe,
@@ -244,7 +243,14 @@ export default function SafeDashboardClient({
                   }
                 }}
                 title="Export transaction JSON to file"
-                disabled={!currentTx}
+                disabled={
+                  !currentTx ||
+                  unavailable ||
+                  !isOwner ||
+                  !safeInfo?.deployed ||
+                  !!error ||
+                  isLoading
+                }
               >
                 Export Tx
               </button>
@@ -253,6 +259,13 @@ export default function SafeDashboardClient({
                 data-testid="safe-dashboard-import-tx-btn"
                 onClick={() => fileInputRef.current?.click()}
                 title="Import transaction JSON from file"
+                disabled={
+                  unavailable ||
+                  !isOwner ||
+                  !safeInfo?.deployed ||
+                  !!error ||
+                  isLoading
+                }
               >
                 Import Tx
               </button>
@@ -320,7 +333,7 @@ export default function SafeDashboardClient({
             )}
             {safeInfo &&
               safeInfo.deployed &&
-              !readOnly &&
+              isOwner &&
               !isLoading &&
               !error &&
               !unavailable && (
@@ -336,7 +349,7 @@ export default function SafeDashboardClient({
               )}
             {safeInfo &&
               safeInfo.deployed &&
-              readOnly &&
+              !isOwner &&
               !isLoading &&
               !error &&
               !unavailable && (

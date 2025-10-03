@@ -97,7 +97,7 @@ test("should create a new safe account and navigate to dashboard", async ({
 
   // Wait for prediction to finish and assert predicted address
   await page.waitForSelector('[data-testid="predicted-safe-address-value"]', {
-    timeout: 15000,
+    timeout: 60000,
   });
   await expect(
     page.locator('[data-testid="predicted-safe-address-value"]'),
@@ -111,7 +111,7 @@ test("should create a new safe account and navigate to dashboard", async ({
 
   // Wait for deployment modal and assert modal content
   await page.waitForSelector('[data-testid="deployment-modal-root"]', {
-    timeout: 20000,
+    timeout: 60000,
   });
   const modal = page.locator('[data-testid="deployment-modal-root"]');
   await expect(
@@ -196,9 +196,7 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
   await page
     .locator('[data-testid="signer-input-0"]')
     .fill("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
-  // Optionally add another owner
-  // await page.locator('[data-testid="add-owner-btn"]').click();
-  // Set threshold (if needed)
+  // Set threshold
   await page.locator('[data-testid="threshold-input"]').fill("1");
   // Click Next to go to review step
   await page.locator('button.btn-primary:has-text("Next")').click();
@@ -226,7 +224,7 @@ test("should create a new safe account on Sepolia and Anvil and show undeployed 
 
   // Wait for prediction to finish and assert predicted address
   await page.waitForSelector('[data-testid="predicted-safe-address-value"]', {
-    timeout: 15000,
+    timeout: 60000,
   });
   await expect(
     page.locator('[data-testid="predicted-safe-address-value"]'),

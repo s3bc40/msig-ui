@@ -23,7 +23,7 @@ export default function HomePageClient() {
           {isConnected ? (
             <Link
               href="/accounts"
-              className="btn btn-primary btn-soft w-full rounded py-4 text-lg"
+              className="btn btn-primary btn-soft text-md w-full rounded py-4 sm:text-lg"
               data-testid="continue-with-account"
             >
               Continue with {address?.slice(0, 6) + "..." + address?.slice(-4)}

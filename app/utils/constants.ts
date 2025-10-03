@@ -60,5 +60,16 @@ export const DEFAULT_SAFE_WALLET_DATA = {
 };
 
 // LocalStorage keys
+export const WAGMI_CONFIG_NETWORKS_KEY = "MSIG_wagmiConfigNetworks";
 export const SAFE_TX_STORAGE_KEY = "MSIGUI_safeCurrentTxMap";
 export const SAFE_WALLET_DATA_KEY = "MSIGUI_safeWalletData";
+
+// Network form defaults
+export const NETWORK_FORM_DEFAULTS = {
+  name: "",
+  id: "",
+  rpcUrl: "",
+  blockExplorerUrl: "",
+  blockExplorerName: "",
+  nativeCurrency: { name: "", symbol: "", decimals: 18 },
+};

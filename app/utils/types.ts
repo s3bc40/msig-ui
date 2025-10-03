@@ -1,7 +1,7 @@
 // Types for SafeProvider helpers
 import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { ContractNetworks } from "./contractNetworks";
-import { Chain } from "viem";
+import { Chain, ChainContract } from "viem";
 
 type SafeStep = {
   status: "idle" | "running" | "success" | "error";
@@ -139,3 +139,48 @@ export interface DeploymentModalProps {
   onSuccess?: () => void;
   successLabel?: string;
 }
+
+// Custom Chain Input type
+export interface CustomChainInput {
+  id: number;
+  name: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  rpcUrl: string;
+  blockExplorerUrl?: string;
+  blockExplorerName?: string;
+  contracts?: Record<string, ChainContract>;
+}
+
+// Detected Chain Result type
+export type DetectedChainResult = {
+  chain: Chain;
+  isCustom: boolean;
+};
+
+// Form state for custom network modal
+export interface NetworkFormState {
+  rpcUrl: string;
+  name: string;
+  id: string | number;
+  blockExplorerUrl?: string;
+  blockExplorerName?: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+}
+
+// Default form state for custom network modal
+export type FormAction =
+  | { type: "update"; key: keyof NetworkFormState; value: string | number }
+  | {
+      type: "updateCurrency";
+      currencyKey: keyof NetworkFormState["nativeCurrency"];
+      currencyValue: string | number;
+    }
+  | { type: "reset" };

@@ -84,7 +84,17 @@ test("should export Safe transaction JSON and verify file content", async ({
     { txMap: MOCK_SAFE_TX_SIGNED_MAP },
   );
 
-  await page.reload(); // Reload to ensure the init script takes effect
+  // Reload the page to ensure the script runs and reconnect wallet if needed
+  await page.reload();
+  if (
+    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
+  ) {
+    await page.locator('[data-testid="rk-connect-button"]').first().click();
+    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
+      timeout: 60000,
+    });
+    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
+  }
 
   // Click the Safe row link for the correct chain/address
   const safeRow = page.locator(
@@ -140,6 +150,18 @@ test("should import Safe transaction JSON and show in dashboard", async ({
   await page.addInitScript(() => {
     localStorage.setItem("MSIGUI_safeCurrentTxMap", JSON.stringify({}));
   });
+
+  // Reload the page to ensure the script runs and reconnect wallet if needed
+  await page.reload();
+  if (
+    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
+  ) {
+    await page.locator('[data-testid="rk-connect-button"]').first().click();
+    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
+      timeout: 60000,
+    });
+    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
+  }
 
   // Click the Safe row link for the correct chain/address
   const safeRow = page.locator(

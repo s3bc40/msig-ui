@@ -1,5 +1,7 @@
 # MSIG UI
 
+> **Disclaimer**: Bear in mind this is still a project in early development. It still needs further testing and polishing. Feedback and contributions are welcome!
+
 A web interface for managing multisignature wallets inspired by SafeWallet and EternalSafeWallet. This is a 100% local safe wallet with multisig support, import/export, and transaction workflows.
 
 - [MSIG UI](#msig-ui)
@@ -224,8 +226,10 @@ To run your own local Safe contracts for development, follow these steps:
 
 ## TODO
 
+- [ ] Let user create their network configuration (RPC URL, chainId, etc.) in UI and store in localStorage.
 - [ ] Let user remove current transaction from Safe dashboard.
 - [ ] Improve devcontainer setup for E2E tests; currently, UI mode has limitations.
+- [ ] Ensure smooth DX when switching between local and devcontainer environments and wild processes cleaning (next-server, anvil).
 - [ ] Add support for more chains other than testnets if everything works well.
 - [ ] Add support to connect Safe wallet to other dApps with WalletConnect.
 - [ ] Adapted for SafeWallet@1.4.1-3 contracts; need to adapt to any versions.

@@ -9,6 +9,7 @@ export interface ModalProps {
   showCloseButton?: boolean;
   closeLabel?: string;
   testid?: string;
+  closeOnClickOutside?: boolean;
 }
 
 export default function Modal({
@@ -20,6 +21,7 @@ export default function Modal({
   showCloseButton = true,
   closeLabel = "Close",
   testid = "modal",
+  closeOnClickOutside = false,
 }: ModalProps) {
   if (!open) return null;
   return (
@@ -38,6 +40,13 @@ export default function Modal({
           </div>
         )}
       </div>
+      {closeOnClickOutside && (
+        <form method="dialog" className="modal-backdrop">
+          <button type="reset" onClick={onClose}>
+            close
+          </button>
+        </form>
+      )}
     </dialog>
   );
 }
