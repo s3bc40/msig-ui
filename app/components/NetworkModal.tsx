@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 import { useChainManager } from "../hooks/useChainManager";
 import NetworkChainSvg from "../assets/svg/NetworkChainSvg";
@@ -12,13 +12,23 @@ import PenEditSvg from "../assets/svg/PenEditSvg";
 export default function NetworkModal({
   open,
   onClose,
+  suggestedFormState,
 }: {
   open: boolean;
   onClose: () => void;
+  suggestedFormState?: import("../utils/types").NetworkFormState;
 }) {
   const { configChains, removeChainById, addOrUpdateChain } = useChainManager();
   const [showForm, setShowForm] = useState<null | "add" | "edit">(null);
   const [editChain, setEditChain] = useState<NetworkFormState | null>(null);
+
+  // Always pre-fill form when modal is opened and suggestedFormState is present
+  useEffect(() => {
+    if (open && suggestedFormState) {
+      setEditChain(suggestedFormState);
+      setShowForm("add");
+    }
+  }, [open, suggestedFormState]);
 
   function handleNetworkAdd(state: NetworkFormState) {
     addOrUpdateChain({

@@ -39,6 +39,8 @@ export const WagmiConfigProvider: React.FC<{
     anvil,
   ]);
 
+  const [chainsLoaded, setChainsLoaded] = useState(false);
+
   // Load chains from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -49,19 +51,22 @@ export const WagmiConfigProvider: React.FC<{
         } catch {
           setConfigChains([mainnet, sepolia, anvil]);
         }
+      } else {
+        setConfigChains([mainnet, sepolia, anvil]);
       }
+      setChainsLoaded(true);
     }
   }, []);
 
   // Save chains to localStorage whenever they change
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && chainsLoaded) {
       localStorage.setItem(
         WAGMI_CONFIG_NETWORKS_KEY,
         JSON.stringify(configChains),
       );
     }
-  }, [configChains]);
+  }, [configChains, chainsLoaded]);
 
   // Compute wagmi config from chains
   const wagmiConfig = useMemo(

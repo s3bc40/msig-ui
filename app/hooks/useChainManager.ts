@@ -26,13 +26,17 @@ export function createChain(input: CustomChainInput) {
   });
 }
 
+export function getViemChainFromId(chainId: number): Chain | undefined {
+  return Object.values(viemChains).find((chain) => chain.id === chainId);
+}
+
 export async function detectChainFromRpc(
   rpcUrl: string,
 ): Promise<DetectedChainResult> {
   const client = createPublicClient({ transport: http(rpcUrl) });
   const chainId = await client.getChainId();
   // Try to find a matching chain in viem/chains
-  const found = Object.values(viemChains).find((chain) => chain.id === chainId);
+  const found = getViemChainFromId(chainId);
   if (found) {
     return {
       chain: {
@@ -100,6 +104,7 @@ export function useChainManager() {
     configChains,
     addOrUpdateChain,
     removeChainById,
+    getViemChainFromId,
     detectChain,
     detectedChain,
     detecting,
