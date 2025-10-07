@@ -22,14 +22,12 @@ test.beforeEach("Setup", async ({ page, metamask }) => {
   await page.goto("/accounts");
 
   // Connect wallet if not already connected
-  if (
-    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
-  ) {
-    await page.locator('[data-testid="rk-connect-button"]').first().click();
+  if (await page.getByTestId("rk-connect-button").first().isVisible()) {
+    await page.getByTestId("rk-connect-button").first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
       timeout: 60000,
     });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
+    await page.getByTestId("rk-wallet-option-metaMask").click();
     await metamask.connectToDapp();
   }
 });
@@ -39,38 +37,26 @@ test("should redirect to safe dashboard on click on account row", async ({
   page,
 }) => {
   // Expand the safe account row if needed
-  const safeRow = page.locator(
-    `[data-testid="safe-account-row-${ANVIL_SAFE_THREE_SIGNERS}"]`,
+  const safeRow = page.getByTestId(
+    `safe-account-row-${ANVIL_SAFE_THREE_SIGNERS}`,
   );
   await safeRow.waitFor({ state: "visible" });
-  const collapseCheckbox = safeRow.locator(
-    '[data-testid="safe-account-collapse"]',
-  );
+  const collapseCheckbox = safeRow.getByTestId("safe-account-collapse");
   await collapseCheckbox.waitFor({ state: "visible" });
   await collapseCheckbox.click();
   // Now click the safe link for the correct chain/address
-  const safeRowLink = safeRow.locator(
-    `[data-testid="safe-account-link-${ANVIL_SAFE_THREE_SIGNERS}-${CHAIN_ID_ANVIL}"]`,
+  const safeRowLink = safeRow.getByTestId(
+    `safe-account-link-${ANVIL_SAFE_THREE_SIGNERS}-${CHAIN_ID_ANVIL}`,
   );
   await safeRowLink.waitFor({ state: "visible" });
   await safeRowLink.click();
 
   // Assert SafeDashboardClient key elements are visible
-  await expect(
-    page.locator('[data-testid="safe-dashboard-threshold"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="safe-dashboard-owners"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="safe-dashboard-nonce"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="safe-dashboard-balance"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="safe-dashboard-divider"]'),
-  ).toBeVisible();
+  await expect(page.getByTestId("safe-dashboard-threshold")).toBeVisible();
+  await expect(page.getByTestId("safe-dashboard-owners")).toBeVisible();
+  await expect(page.getByTestId("safe-dashboard-nonce")).toBeVisible();
+  await expect(page.getByTestId("safe-dashboard-balance")).toBeVisible();
+  await expect(page.getByTestId("safe-dashboard-divider")).toBeVisible();
 });
 
 test("should export Safe transaction JSON and verify file content", async ({
@@ -118,9 +104,7 @@ test("should export Safe transaction JSON and verify file content", async ({
   ).toBeVisible();
 
   // Export transaction
-  const exportBtn = page.locator(
-    '[data-testid="safe-dashboard-export-tx-btn"]',
-  );
+  const exportBtn = page.getByTestId("safe-dashboard-export-tx-btn");
   await exportBtn.waitFor({ state: "visible" });
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -194,9 +178,7 @@ test("should import Safe transaction JSON and show in dashboard", async ({
   );
 
   // Import transaction
-  const importBtn = page.locator(
-    '[data-testid="safe-dashboard-import-tx-btn"]',
-  );
+  const importBtn = page.getByTestId("safe-dashboard-import-tx-btn");
   await importBtn.waitFor({ state: "visible" });
   const importInput = page.locator(
     '[data-testid="safe-dashboard-import-tx-input"]',

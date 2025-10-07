@@ -6,6 +6,11 @@ import Link from "next/link";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
 
+/**
+ * HomePageClient component that displays a welcome message and a connect button.
+ *
+ * @returns {JSX.Element} The rendered HomePageClient component.
+ */
 export default function HomePageClient() {
   const { isConnected, address } = useAccount();
 

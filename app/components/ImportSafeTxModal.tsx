@@ -9,6 +9,12 @@ export interface ImportSafeTxModalProps {
   onReplace: () => void;
 }
 
+/**
+ * Generate a summary string for the imported transaction data.
+ *
+ * @param {ImportTxPreview | { error: string } | null} data - The imported transaction data or an error object.
+ * @returns A summary string of the transaction data or an error message.
+ */
 function getSafeTxSummary(
   data: ImportTxPreview | { error: string } | null,
 ): string {
@@ -24,6 +30,15 @@ function getSafeTxSummary(
   return summary;
 }
 
+/**
+ * A modal component to import a Safe transaction from a JSON object.
+ *
+ * @param {boolean} open - Whether the modal is open or not.
+ * @param {() => void} onClose - Function to call when closing the modal.
+ * @param {ImportTxPreview | { error: string } | null} importPreview - The imported transaction data or an error object.
+ * @param {() => void} onReplace - Function to call when replacing the current transaction with the imported one.
+ * @returns A modal component for importing a Safe transaction.
+ */
 export default function ImportSafeTxModal({
   open,
   onClose,

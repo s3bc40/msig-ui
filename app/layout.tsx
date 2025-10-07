@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   description: "Multi-Signature Wallet Interface",
 };
 
+/**
+ * RootLayout component that sets up the HTML structure and includes global providers and navigation.
+ *
+ * @param param0 - The children components to be rendered within the layout.
+ * @returns {JSX.Element} The rendered RootLayout component.
+ */
 export default async function RootLayout({
   children,
 }: {

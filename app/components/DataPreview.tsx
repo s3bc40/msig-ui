@@ -1,5 +1,12 @@
 import { useState } from "react";
 
+/**
+ * Component to display a preview of a hexadecimal data string.
+ * If the string exceeds a certain length, it shows a truncated version with an option to expand.
+ *
+ * @param {string} value - The hexadecimal data string to display.
+ * @returns A component that displays the data string with preview and expand/collapse functionality.
+ */
 export default function DataPreview({ value }: { value: string }) {
   const [showAll, setShowAll] = useState(false);
   const METHOD_SELECTOR_LEN = 10; // 4 bytes + 0x prefix

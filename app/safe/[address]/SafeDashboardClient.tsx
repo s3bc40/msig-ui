@@ -19,6 +19,12 @@ import Link from "next/link";
 import DeploymentModal from "@/app/components/DeploymentModal";
 import ImportSafeTxModal from "@/app/components/ImportSafeTxModal";
 
+/**
+ * SafeDashboardClient component that displays the dashboard for a specific safe, including its details and actions.
+ *
+ * @param param0 - The props object containing the safe address.
+ * @returns {JSX.Element} The rendered SafeDashboardClient component.
+ */
 export default function SafeDashboardClient({
   safeAddress,
 }: {
@@ -38,6 +44,7 @@ export default function SafeDashboardClient({
     deployUndeployedSafe,
     getSafeTransactionCurrent,
   } = useSafe(safeAddress);
+  // Hooks
   const { exportTx, importTx } = useSafeTxContext();
 
   // Modal state for deployment
@@ -54,6 +61,7 @@ export default function SafeDashboardClient({
     ImportTxPreview | { error: string } | null
   >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Fetch current transaction if any
   useEffect(() => {
     if (!kit || isLoading) return; // Wait for kit to be ready
@@ -238,8 +246,8 @@ export default function SafeDashboardClient({
                     a.download = `safe-tx.json`;
                     a.click();
                     URL.revokeObjectURL(url);
-                  } catch {
-                    // Optionally show error toast
+                  } catch (e: unknown) {
+                    console.error("Export error:", e);
                   }
                 }}
                 title="Export transaction JSON to file"

@@ -9,6 +9,14 @@ import { NetworkFormState } from "../utils/types";
 import XSymbolSvg from "../assets/svg/XSymbolSvg";
 import PenEditSvg from "../assets/svg/PenEditSvg";
 
+/**
+ * A modal component to manage user config networks.
+ *
+ * @param {boolean} open - Whether the modal is open or not.
+ * @param {() => void} onClose - Function to call when closing the modal.
+ * @param {NetworkFormState | undefined} suggestedFormState - Optional suggested form state for pre-filling the form.
+ * @returns A modal component for managing user networks.
+ */
 export default function NetworkModal({
   open,
   onClose,
@@ -18,6 +26,7 @@ export default function NetworkModal({
   onClose: () => void;
   suggestedFormState?: import("../utils/types").NetworkFormState;
 }) {
+  // Chain management hook
   const { configChains, removeChainById, addOrUpdateChain } = useChainManager();
   const [showForm, setShowForm] = useState<null | "add" | "edit">(null);
   const [editChain, setEditChain] = useState<NetworkFormState | null>(null);
@@ -30,6 +39,11 @@ export default function NetworkModal({
     }
   }, [open, suggestedFormState]);
 
+  /**
+   * Handle adding or updating a network based on the provided form state.
+   *
+   * @param state - The state of the network form to add or update.
+   */
   function handleNetworkAdd(state: NetworkFormState) {
     addOrUpdateChain({
       id: Number(state.id),
@@ -78,6 +92,7 @@ export default function NetworkModal({
             <li className="p-4 pb-2 text-xs tracking-wide opacity-60">
               Your configured networks
             </li>
+            {/* Conditional rendering of configured networks */}
             {configChains.length > 0 ? (
               configChains.map((chain) => {
                 return (
@@ -93,6 +108,7 @@ export default function NetworkModal({
                         Chain ID: {chain.id}
                       </div>
                     </div>
+                    {/* Edit network button */}
                     <div className="flex items-center gap-2">
                       <button
                         className="btn btn-square btn-ghost"
@@ -117,6 +133,7 @@ export default function NetworkModal({
                       >
                         <PenEditSvg />
                       </button>
+                      {/* Remove network button with tooltip if only one chain remains */}
                       <div
                         className="tooltip tooltip-left"
                         data-tip={
@@ -144,6 +161,7 @@ export default function NetworkModal({
               </li>
             )}
           </ul>
+          {/* Add and Close buttons */}
           <div className="mb-4 flex items-center justify-center gap-4">
             <button
               className="btn btn-primary btn-sm"

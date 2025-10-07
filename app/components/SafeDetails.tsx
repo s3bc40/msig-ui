@@ -8,6 +8,18 @@ interface SafeDetailsProps {
   threshold: number;
 }
 
+/**
+ * SafeDetails Component
+ *
+ * This component displays the details of a Safe, including its name, selected networks,
+ * list of signers, and the threshold for transaction approvals.
+ *
+ * @param {string} safeName - The name of the Safe.
+ * @param {Chain[] | undefined} selectedNetworks - An array of selected network objects.
+ * @param {string[]} signers - An array of signer addresses.
+ * @param {number} threshold - The number of required signatures for transaction approval.
+ * @returns A component displaying the Safe's details in a structured format.
+ */
 export default function SafeDetails({
   safeName,
   selectedNetworks,

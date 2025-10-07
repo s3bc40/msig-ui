@@ -4,6 +4,12 @@ import { CustomChainInput, DetectedChainResult } from "../utils/types";
 import * as viemChains from "viem/chains";
 import { useWagmiConfigContext } from "../provider/WagmiConfigProvider";
 
+/**
+ * Create a custom chain object compatible with viem's Chain type.
+ *
+ * @param {CustomChainInput} input - The input parameters for the custom chain.
+ * @returns {Chain} - The constructed Chain object.
+ */
 export function createChain(input: CustomChainInput) {
   return defineChain({
     id: input.id,
@@ -26,10 +32,23 @@ export function createChain(input: CustomChainInput) {
   });
 }
 
+/**
+ * Get a viem Chain object by its chain ID.
+ *
+ * @param {number} chainId - The ID of the chain to retrieve.
+ * @returns {Chain | undefined} - The corresponding Chain object or undefined if not found.
+ */
 export function getViemChainFromId(chainId: number): Chain | undefined {
   return Object.values(viemChains).find((chain) => chain.id === chainId);
 }
 
+/**
+ * Detect the chain information from a given RPC URL.
+ *
+ * @param {string} rpcUrl - The RPC URL to detect the chain from.
+ * @returns {Promise<DetectedChainResult>} - A promise that resolves to the detected chain information.
+ * @throws Will throw an error if the chain cannot be detected.
+ */
 export async function detectChainFromRpc(
   rpcUrl: string,
 ): Promise<DetectedChainResult> {
@@ -60,6 +79,11 @@ export async function detectChainFromRpc(
   }
 }
 
+/**
+ * Hook to manage user-configured chains.
+ *
+ * @returns An object containing the configured chains and functions to manage them.
+ */
 export function useChainManager() {
   const { configChains, setConfigChains } = useWagmiConfigContext();
   const [error, setError] = useState<string | null>(null);

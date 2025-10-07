@@ -28,7 +28,19 @@ import { Chain, zeroAddress } from "viem";
 import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import { getRandomSafeName } from "@/app/utils/helpers";
 
+/**
+ * Create Safe Client Component
+ *
+ * This component handles the client-side logic and UI for creating a new safe.
+ * It manages the multi-step process of selecting networks, adding owners,
+ * setting thresholds, predicting the safe address, and deploying the safe.
+ *
+ * It also store undeployed safes in local storage for later execution.
+ *
+ * @returns Create Safe Client Component
+ */
 export default function CreateSafeClient() {
+  // Hooks
   const { address: signer, chain } = useAccount();
   const chains = useChains();
   const router = useRouter();
@@ -56,6 +68,21 @@ export default function CreateSafeClient() {
 
   // Owners state with auto-fill of connected wallet
   const [signers, setSigners] = useState<string[]>([""]);
+  // Threshold state
+  const [threshold, setThreshold] = useState<number>(1);
+  // Salt nonce for Safe creation (number string for SDK compatibility)
+  const [saltNonce, setSaltNonce] = useState<number>(0);
+  // Modal state for deployment progress
+  const [modalOpen, setModalOpen] = useState(false);
+  // Predict Safe address for all selected chains when entering validation step
+  const [predictedAddresses, setPredictedAddresses] = useState<
+    Record<string, `0x${string}` | null>
+  >({});
+
+  /**
+   * Auto-fill first signer with connected wallet address when available
+   * and on step 0 (chain selection step)
+   */
   useEffect(() => {
     if (currentStep === 0 && signer) {
       setSigners((prev) => {
@@ -65,26 +92,37 @@ export default function CreateSafeClient() {
         return prev;
       });
     }
-    // Do not update signers if not at signers selection step
   }, [signer, currentStep]);
-  // Helpers to manage dynamic signer fields
+
+  /**
+   * Owners management functions
+   *
+   * Add, remove, and update signer fields in the owners list.
+   */
   function addSignerField() {
     setSigners((prev) => [...prev, ""]);
   }
+
+  /**
+   * Remove a signer field by index
+   *
+   * @param signerIdx Index of the signer field to remove
+   */
   function removeSignerField(signerIdx: number) {
     setSigners((prev) => prev.filter((_, idx) => idx !== signerIdx));
   }
+
+  /**
+   * Update a signer field by index
+   *
+   * @param signerIdx Index of the signer field to update
+   * @param value New value for the signer field
+   */
   function handleSignerChange(signerIdx: number, value: string) {
     setSigners((prevSigners) =>
       prevSigners.map((owner, idx) => (idx === signerIdx ? value : owner)),
     );
   }
-
-  // Threshold state
-  const [threshold, setThreshold] = useState<number>(1);
-
-  // Salt nonce for Safe creation (number string for SDK compatibility)
-  const [saltNonce, setSaltNonce] = useState<number>(0);
 
   // Step content as components (now with StepNetworks)
   const stepContent = [
@@ -114,10 +152,20 @@ export default function CreateSafeClient() {
     null,
   ];
 
-  // Modal state for deployment progress
-  const [modalOpen, setModalOpen] = useState(false);
-
-  // Utility: Predict Safe address across chains, loop saltNonce until all match and not deployed
+  /**
+   * Predict Safe address for all selected chains with the same owners,
+   * threshold, and salt nonce, ensuring consistency across chains.
+   *
+   * If a consistent address cannot be found within maxAttempts,
+   * an error is thrown.
+   *
+   * @param owners List of owner addresses
+   * @param threshold Number of required confirmations
+   * @param chains List of selected chains
+   * @param initialSaltNonce Initial salt nonce to start with
+   * @param maxAttempts Maximum number of attempts to find a consistent address
+   * @returns Object containing the consistent safe address, used salt nonce, and predictions per chain
+   */
   const predictConsistentSafeAddressAcrossChains = useCallback(
     async (
       owners: `0x${string}`[],
@@ -127,6 +175,7 @@ export default function CreateSafeClient() {
       maxAttempts = 20,
     ) => {
       let saltNonce = initialSaltNonce;
+      // Try up to maxAttempts to find a consistent address
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const predictions: Record<
           string,
@@ -149,12 +198,14 @@ export default function CreateSafeClient() {
           }
           predictions[chain.id] = result;
         }
+        // Check if all predicted addresses match and none are deployed
         const addresses = Object.values(predictions).map((p) => p.address);
         const allMatch = addresses.every((addr) => addr === addresses[0]);
         const anyDeployed = Object.values(predictions).some(
           (p) => p.isDeployed,
         );
 
+        // If all match and none deployed, return the result
         if (allMatch && !anyDeployed) {
           return { safeAddress: addresses[0], saltNonce, predictions };
         }
@@ -165,13 +216,21 @@ export default function CreateSafeClient() {
     [predictNewSafeAddress],
   );
 
-  // Predict Safe address for all selected chains when entering validation step
-  const [predictedAddresses, setPredictedAddresses] = useState<
-    Record<string, `0x${string}` | null>
-  >({});
+  /**
+   * Effect to predict Safe address when entering step 2 (review & validate)
+   * with valid data: at least one selected chain, at least one valid signer,
+   * and a threshold greater than 0.
+   *
+   * Updates predictedAddresses state with the results.
+   * Handles loading and error states.
+   *
+   * Cleans up by cancelling any ongoing prediction if dependencies change
+   * or component unmounts.
+   */
   useEffect(() => {
     let cancelled = false;
     async function runPrediction() {
+      // Only run prediction when entering step 2 with valid data
       if (
         currentStep !== 2 ||
         selectedChains.length === 0 ||
@@ -179,10 +238,12 @@ export default function CreateSafeClient() {
         threshold === 0
       )
         return;
+      // Reset previous prediction state
       setIsPredicting(true);
       setPredictError(null);
       const validSigners = signers.filter(isValidAddress);
       try {
+        // Predict consistent Safe address across selected chains
         const { saltNonce: foundSaltNonce, predictions } =
           await predictConsistentSafeAddressAcrossChains(
             validSigners,
@@ -228,7 +289,14 @@ export default function CreateSafeClient() {
     predictConsistentSafeAddressAcrossChains,
   ]);
 
-  // Deploy Safe
+  /**
+   * Handle Safe deployment for single-chain Safes.
+   *
+   * Sets up modal and deployment state, calls deployNewSafe,
+   * and updates deployment steps and error states accordingly.
+   *
+   * @returns Promise<void>
+   */
   async function handleDeploySafe() {
     setModalOpen(true);
     setIsDeploying(true);
@@ -274,14 +342,28 @@ export default function CreateSafeClient() {
     }
   }
 
+  /**
+   * Handle closing the deployment modal
+   *
+   * Resets modal state and deployment steps.
+   */
   function handleCloseModal() {
     setModalOpen(false);
     // Deep copy to reset steps
     setDeploySteps(DEFAULT_DEPLOY_STEPS.map((step) => ({ ...step })));
   }
 
+  /**
+   * Handle adding multi-chain Safe accounts to local storage for later deployment.
+   *
+   * Loops through selected chains, adds each safe to local storage with
+   * PendingSafeStatus.AWAITING_EXECUTION status, and navigates to /accounts page.
+   *
+   * @returns Promise<void>
+   */
   async function handleValidateMultiChain() {
     const validSigners = signers.filter(isValidAddress);
+    // Add each selected chain safe to local storage
     selectedChains.forEach((chain) => {
       const address = predictedAddresses[chain.id];
       if (address) {
@@ -314,6 +396,14 @@ export default function CreateSafeClient() {
     router.push("/accounts");
   }
 
+  /**
+   * Check if deployment was successful based on steps, txHash, and predicted addresses.
+   *
+   * @param deploySteps Array of deployment steps
+   * @param deployTxHash Transaction hash of the deployment
+   * @param predictedAddresses Record of predicted addresses per chain
+   * @returns True if deployment was successful, false otherwise
+   */
   function isDeploySuccess(
     deploySteps: SafeDeployStep[],
     deployTxHash: string | null,
@@ -330,6 +420,7 @@ export default function CreateSafeClient() {
   return (
     <>
       <AppSection data-testid="create-safe-section">
+        {/* Header with Stepper and Cancel button */}
         <div className="grid w-full grid-cols-6 items-center">
           <div className="self-start">
             <BtnCancel href="/accounts" data-testid="cancel-create-safe-btn" />
@@ -341,6 +432,7 @@ export default function CreateSafeClient() {
           />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center">
+          {/* Review & Validate */}
           {currentStep === 2 ? (
             <AppCard
               title="Review & Validate Safe Account"
@@ -437,6 +529,7 @@ export default function CreateSafeClient() {
               </div>
             </AppCard>
           ) : (
+            // Other steps: Chain selection and Owners/Threshold
             <div className="grid w-full grid-cols-12 gap-8">
               {/* Step content: pass testid via props if possible */}
               {stepContent[currentStep]}

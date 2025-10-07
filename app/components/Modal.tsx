@@ -12,6 +12,20 @@ export interface ModalProps {
   closeOnClickOutside?: boolean;
 }
 
+/**
+ * A reusable modal component with customizable content and styling.
+ *
+ * @param {boolean} open - Whether the modal is open or not.
+ * @param {() => void} onClose - Function to call when closing the modal.
+ * @param {React.ReactNode} children - The content to be displayed inside the modal.
+ * @param {string} [className] - Optional additional CSS classes for the modal container.
+ * @param {string} [boxClassName] - Optional additional CSS classes for the modal box.
+ * @param {boolean} [showCloseButton=true] - Whether to show a close button at the bottom of the modal.
+ * @param {string} [closeLabel="Close"] - Label for the close button.
+ * @param {string} [testid="modal"] - Optional test ID for testing purposes.
+ * @param {boolean} [closeOnClickOutside=false] - Whether to close the modal when clicking outside of it.
+ * @returns A styled modal component with customizable content and behavior.
+ */
 export default function Modal({
   open,
   onClose,

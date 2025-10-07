@@ -17,6 +17,12 @@ import { MinimalEIP1193Provider, SafeDeployStep } from "../utils/types";
 import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
 import { waitForTransactionReceipt } from "viem/actions";
 
+/**
+ * Custom hook to manage and interact with a specific Safe wallet.
+ *
+ * @param {`0x${string}`} safeAddress - The address of the Safe wallet to manage.
+ * @returns An object containing Safe information, loading states, and functions to interact with the Safe.
+ */
 export default function useSafe(safeAddress: `0x${string}`) {
   const { address: signer, chain, connector, isConnected } = useAccount();
 

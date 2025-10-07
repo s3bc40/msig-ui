@@ -9,6 +9,16 @@ interface StepLayoutProps {
   className?: string;
 }
 
+/**
+ * A layout component for steps in a multi-step process.
+ *
+ * @param {React.ReactNode} title - The title of the step.
+ * @param {React.ReactNode} description - A brief description of the step.
+ * @param {React.ReactNode} actions - Action buttons or links related to the step.
+ * @param {React.ReactNode} children - The main content of the step.
+ * @param {string} [className] - Optional additional CSS classes for styling.
+ * @returns A styled layout component for multi-step processes.
+ */
 export default function StepLayout({
   title,
   description,

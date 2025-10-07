@@ -9,12 +9,25 @@ import { useParams, useRouter } from "next/navigation";
 import BtnCancel from "@/app/components/BtnCancel";
 import { AbiFunctionItem } from "@/app/utils/types";
 
+/**
+ * Helper to extract function names from ABI
+ *
+ * @param abi ABI array
+ * @returns
+ */
 function getAbiMethods(abi: AbiFunctionItem[]): string[] {
   return abi
     .filter((item) => item.type === "function")
     .map((item) => item.name);
 }
 
+/**
+ * Helper to get inputs of a specific method from ABI
+ *
+ * @param abi ABI array
+ * @param methodName Method name
+ * @returns Input definitions
+ */
 function getAbiMethodInputs(
   abi: AbiFunctionItem[],
   methodName: string,
@@ -25,6 +38,9 @@ function getAbiMethodInputs(
   return method?.inputs ?? [];
 }
 
+/**
+ * Handler for ABI method selection
+ */
 function handleAbiMethodSelect(
   abiJson: string,
   methodName: string,
@@ -42,6 +58,12 @@ function handleAbiMethodSelect(
   }
 }
 
+/**
+ * Helper to parse ABI JSON and extract method names
+ *
+ * @param json ABI JSON string
+ * @returns Method names array
+ */
 function parseAbiMethodsFromJson(json: string): string[] {
   try {
     const abi = JSON.parse(json);
@@ -51,6 +73,11 @@ function parseAbiMethodsFromJson(json: string): string[] {
   }
 }
 
+/**
+ * Component for creating a new Safe transaction
+ *
+ * @returns Component for creating a new Safe transaction
+ */
 export default function NewSafeTxClient() {
   // Hooks
   const { address: safeAddress } = useParams();
@@ -58,6 +85,7 @@ export default function NewSafeTxClient() {
   const { buildSafeTransaction, getSafeTransactionHash, isOwner } = useSafe(
     safeAddress as `0x${string}`,
   );
+
   // Form state
   const [to, setTo] = useState("");
   const [value, setValue] = useState("");
@@ -82,7 +110,11 @@ export default function NewSafeTxClient() {
     }[]
   >([]);
 
-  // ProtocolKit integration: build Safe transaction
+  /**
+   * Build Safe transaction from the transactions list
+   *
+   * @returns Build and redirect to Safe transaction details page
+   */
   async function handleBuildSafeTransaction() {
     setError(null);
     try {
@@ -107,6 +139,11 @@ export default function NewSafeTxClient() {
     }
   }
 
+  /**
+   * Handle building a single transaction entry and adding it to the list
+   *
+   * @param e Event
+   */
   function handleBuildTx(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -145,7 +182,11 @@ export default function NewSafeTxClient() {
     setInputValues({});
   }
 
-  // UI rendering logic
+  /**
+   * Remove transaction from the list by index
+   *
+   * @param idx Index to remove
+   */
   function handleRemoveTransaction(idx: number) {
     setTransactions((txs) => txs.filter((_, i) => i !== idx));
   }
@@ -205,6 +246,7 @@ export default function NewSafeTxClient() {
                   data-testid="new-safe-tx-value-input"
                 />
               </fieldset>
+              {/* ABI Input and Method Selector */}
               <fieldset
                 className="fieldset"
                 data-testid="new-safe-tx-abi-fieldset"
@@ -274,6 +316,7 @@ export default function NewSafeTxClient() {
                   </div>
                 )}
               </fieldset>
+              {/* Data Hex Input */}
               <fieldset
                 className="fieldset"
                 data-testid="new-safe-tx-data-fieldset"
@@ -302,6 +345,7 @@ export default function NewSafeTxClient() {
                   </>
                 )}
               </fieldset>
+              {/*  Error Alert */}
               {error && (
                 <div
                   className="alert alert-error text-sm whitespace-pre-wrap"
@@ -310,6 +354,7 @@ export default function NewSafeTxClient() {
                   {error}
                 </div>
               )}
+              {/* Submit Button */}
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -381,6 +426,7 @@ export default function NewSafeTxClient() {
                 </tbody>
               </table>
             </div>
+            {/* Build Safe Transaction Button */}
             <button
               className="btn btn-primary mt-4"
               type="button"

@@ -7,21 +7,17 @@ test.beforeEach("Setup", async ({ page, metamask }) => {
   await page.goto("/");
 
   // Connect wallet if not already connected
-  if (
-    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
-  ) {
-    await page.locator('[data-testid="rk-connect-button"]').first().click();
+  if (await page.getByTestId("rk-connect-button").first().isVisible()) {
+    await page.getByTestId("rk-connect-button").first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
       timeout: 60000,
     });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
+    await page.getByTestId("rk-wallet-option-metaMask").click();
     await metamask.connectToDapp();
   }
 
   // Click continue button to go past account selection
-  const continueBtn = await page.locator(
-    '[data-testid="continue-with-account"]',
-  );
+  const continueBtn = await page.getByTestId("continue-with-account");
   if (await continueBtn.isVisible()) {
     await continueBtn.click();
   }
@@ -34,7 +30,7 @@ test.beforeEach("Setup", async ({ page, metamask }) => {
   await page.waitForSelector('[data-testid="create-safe-nav-btn"]', {
     timeout: 60000,
   });
-  await page.locator('[data-testid="create-safe-nav-btn"]').click();
+  await page.getByTestId("create-safe-nav-btn").click();
 });
 
 // Safe creation workflow test for SafeCreation page
@@ -46,7 +42,7 @@ test("should create a new safe account and navigate to dashboard", async ({
   await page.waitForSelector('[data-testid="safe-name-input"]', {
     timeout: 60000,
   });
-  await page.locator('[data-testid="safe-name-input"]').fill("Test Safe");
+  await page.getByTestId("safe-name-input").fill("Test Safe");
   // Select Anvil network badge button if available, otherwise select first
   const anvilBtn = await page.locator(
     'input[data-testid^="network-badge-btn-"][aria-label*="anvil" i]',
@@ -68,58 +64,52 @@ test("should create a new safe account and navigate to dashboard", async ({
     timeout: 60000,
   });
   await page
-    .locator('[data-testid="signer-input-0"]')
+    .getByTestId("signer-input-0")
     .fill("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
   // Optionally add another owner
   // await page.locator('[data-testid="add-owner-btn"]').click();
   // Set threshold (if needed)
-  await page.locator('[data-testid="threshold-input"]').fill("1");
+  await page.getByTestId("threshold-input").fill("1");
   // Click Next to go to review step
   await page.locator('button.btn-primary:has-text("Next")').click();
 
   // Step 3: Review & create
-  const details = page.locator('[data-testid="safe-details-root"]');
-  await expect(details.locator('[data-testid="safe-details-name"]')).toHaveText(
+  const details = page.getByTestId("safe-details-root");
+  await expect(details.getByTestId("safe-details-name")).toHaveText(
     "Test Safe",
   );
+  await expect(details.getByTestId("safe-details-networks")).not.toContainText(
+    "None selected",
+  );
+  await expect(details.getByTestId("safe-details-signers")).toBeVisible();
+  await expect(details.getByTestId("safe-details-signer-0")).toContainText(
+    "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  );
   await expect(
-    details.locator('[data-testid="safe-details-networks"]'),
-  ).not.toContainText("None selected");
-  await expect(
-    details.locator('[data-testid="safe-details-signers"]'),
-  ).toBeVisible();
-  await expect(
-    details.locator('[data-testid="safe-details-signer-0"]'),
-  ).toContainText("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
-  await expect(
-    details.locator('[data-testid="safe-details-threshold-value"]'),
+    details.getByTestId("safe-details-threshold-value"),
   ).toContainText("1 / 1");
 
   // Wait for prediction to finish and assert predicted address
   await page.waitForSelector('[data-testid="predicted-safe-address-value"]', {
     timeout: 60000,
   });
-  await expect(
-    page.locator('[data-testid="predicted-safe-address-value"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="predicted-safe-address-value"]'),
-  ).not.toHaveText("0x");
+  await expect(page.getByTestId("predicted-safe-address-value")).toBeVisible();
+  await expect(page.getByTestId("predicted-safe-address-value")).not.toHaveText(
+    "0x",
+  );
 
   // Click Create Safe
-  await page.locator('[data-testid="create-safe-btn"]').click();
+  await page.getByTestId("create-safe-btn").click();
 
   // Wait for deployment modal and assert modal content
   await page.waitForSelector('[data-testid="deployment-modal-root"]', {
     timeout: 60000,
   });
-  const modal = page.locator('[data-testid="deployment-modal-root"]');
-  await expect(
-    modal.locator('[data-testid="deployment-modal-title"]'),
-  ).toHaveText("Workflow Progress");
-  await expect(
-    modal.locator('[data-testid="deployment-modal-steps-list"]'),
-  ).toBeVisible();
+  const modal = page.getByTestId("deployment-modal-root");
+  await expect(modal.getByTestId("deployment-modal-title")).toHaveText(
+    "Workflow Progress",
+  );
+  await expect(modal.getByTestId("deployment-modal-steps-list")).toBeVisible();
 
   // Confirm metamask popup and confirm transaction
   await page.waitForSelector(
@@ -131,31 +121,25 @@ test("should create a new safe account and navigate to dashboard", async ({
   await metamask.confirmTransactionAndWaitForMining();
 
   // Check that step is marked as success
-  const stepConfirmed = page.locator(
-    '[data-testid="deployment-modal-step-confirmed"]',
-  );
+  const stepConfirmed = page.getByTestId("deployment-modal-step-confirmed");
   await expect(stepConfirmed).toHaveClass(/step-success/);
 
   // Check that txHash is visible and not N/A
-  const txHashLocator = modal.locator(
-    '[data-testid="deployment-modal-txhash"]',
-  );
+  const txHashLocator = modal.getByTestId("deployment-modal-txhash");
   await expect(txHashLocator).toBeVisible();
   await expect(txHashLocator).not.toHaveText("N/A");
   // Wait for success button to appear and click it
   await page.waitForSelector('[data-testid="deployment-modal-success-btn"]', {
     timeout: 60000,
   });
-  await page.locator('[data-testid="deployment-modal-success-btn"]').click();
+  await page.getByTestId("deployment-modal-success-btn").click();
 
   // Assert navigation to dashboard and safe appears
   await page.waitForURL("/accounts");
-  await expect(
-    page.locator('[data-testid="safe-accounts-table"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-testid="safe-accounts-table"]'),
-  ).toContainText("Test Safe");
+  await expect(page.getByTestId("safe-accounts-table")).toBeVisible();
+  await expect(page.getByTestId("safe-accounts-table")).toContainText(
+    "Test Safe",
+  );
   // Optionally check that the new safe row exists
   await expect(
     page.locator('[data-testid^="safe-account-row-"]'),

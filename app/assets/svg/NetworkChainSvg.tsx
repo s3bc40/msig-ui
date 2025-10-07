@@ -1,3 +1,8 @@
+/**
+ * SVG icon representing a network or blockchain chain.
+ *
+ * @returns SVG icon representing a network or blockchain chain.
+ */
 export default function NetworkChainSvg() {
   return (
     <svg

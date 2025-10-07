@@ -13,6 +13,20 @@ export interface BroadcastModalProps {
   testid?: string;
 }
 
+/**
+ * A modal component to display the status of a broadcasted transaction.
+ *
+ * @param {boolean} open - Whether the modal is open or not.
+ * @param {string | null} [txHash] - The transaction hash of the broadcasted transaction.
+ * @param {string | null} [error] - An error message if the broadcast failed.
+ * @param {string} [blockExplorerUrl] - The base URL of the block explorer to link to the transaction.
+ * @param {() => void} onClose - Function to call when closing the modal.
+ * @param {string} [closeLabel="Close"] - Label for the close button.
+ * @param {() => void} [onSuccess] - Function to call when the success button is clicked.
+ * @param {string} [successLabel="Back to Safe"] - Label for the success button.
+ * @param {string} [testid="broadcast-modal"] - Test ID for testing purposes.
+ * @returns A modal component displaying the transaction status.
+ */
 const BroadcastModal: React.FC<BroadcastModalProps> = ({
   open,
   txHash,

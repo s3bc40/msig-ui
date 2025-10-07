@@ -14,6 +14,11 @@ import { useAccount, useSwitchChain } from "wagmi";
 import { useSafeWalletContext } from "../provider/SafeWalletProvider";
 import { DEFAULT_DEPLOY_STEPS } from "../utils/constants";
 
+/**
+ * Custom hook to manage the creation and connection of new Safe wallets.
+ *
+ * @returns An object containing functions to predict, deploy, and connect Safes.
+ */
 export default function useNewSafe() {
   // Wagmi hooks
   const { address: signer, connector } = useAccount();
@@ -22,6 +27,7 @@ export default function useNewSafe() {
   // Get SafeWalletProvider context
   const { addSafe, contractNetworks } = useSafeWalletContext();
 
+  // Predict the address of a new Safe without deploying it
   const predictNewSafeAddress = useCallback(
     async (
       owners: `0x${string}`[],
@@ -53,6 +59,7 @@ export default function useNewSafe() {
     [signer, contractNetworks],
   );
 
+  // Deploy a new Safe on the blockchain
   const deployNewSafe = useCallback(
     async (
       owners: `0x${string}`[],
@@ -180,6 +187,7 @@ export default function useNewSafe() {
     [connector, signer, addSafe, switchChain, contractNetworks],
   );
 
+  // Connect to an existing Safe and fetch its owners and threshold
   const connectNewSafe = useCallback(
     async (
       safeAddress: `0x${string}`,

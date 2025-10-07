@@ -12,6 +12,22 @@ export interface StepNameAndNetworksProps {
   placeholder: string;
 }
 
+/**
+ * StepNameAndNetworks Component
+ *
+ * This component allows users to input a name for their Safe and select the networks
+ * they wish to deploy on. It includes form fields for the Safe name and a selection
+ * interface for available networks. The component also provides navigation to the next step.
+ *
+ * @param {Chain[]} chains - An array of available network objects.
+ * @param {Chain[]} selectedChains - An array of currently selected network objects.
+ * @param {(chains: Chain[]) => void} setSelectedChains - Function to update the selected networks.
+ * @param {() => void} onNext - Function to proceed to the next step.
+ * @param {string} safeName - The current name of the Safe.
+ * @param {(name: string) => void} setSafeName - Function to update the Safe name.
+ * @param {string} placeholder - Placeholder text for the Safe name input field.
+ * @returns A component for entering the Safe name and selecting networks.
+ */
 export default function StepNameAndNetworks({
   chains,
   selectedChains,

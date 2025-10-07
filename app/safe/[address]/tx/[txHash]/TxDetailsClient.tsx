@@ -12,10 +12,15 @@ import BtnCancel from "@/app/components/BtnCancel";
 import { BroadcastModal } from "@/app/components/BroadcastModal";
 import { useAccount } from "wagmi";
 
+/**
+ * TxDetailsClient component that displays the details of a specific transaction and allows signing and broadcasting.
+ *
+ * @returns {JSX.Element} The rendered TxDetailsClient component.
+ */
 export default function TxDetailsClient() {
+  // Hooks
   const { chain } = useAccount();
-  const params = useParams();
-  const safeAddress = params.address as `0x${string}`;
+  const { address: safeAddress } = useParams<{ address: `0x${string}` }>();
   const router = useRouter();
   const {
     getSafeTransactionCurrent,
@@ -27,6 +32,7 @@ export default function TxDetailsClient() {
   } = useSafe(safeAddress);
   const { removeTransaction } = useSafeTxContext();
 
+  // Refs and state
   const toastRef = useRef<HTMLDivElement | null>(null);
 
   const [showModal, setShowModal] = useState(false);
@@ -39,9 +45,12 @@ export default function TxDetailsClient() {
     type: "success" | "error" | "info";
     message: string;
   } | null>(null);
-
   const [loading, setLoading] = useState(true);
 
+  // Effects
+  /**
+   * Fetch the current safe transaction when the component mounts or when dependencies change.
+   */
   useEffect(() => {
     setLoading(true);
     let cancelled = false;
@@ -64,6 +73,11 @@ export default function TxDetailsClient() {
     };
   }, [getSafeTransactionCurrent, safeInfo]);
 
+  /**
+   * Handle signing the transaction.
+   *
+   * @returns {Promise<void>} A promise that resolves when the signing process is complete.
+   */
   async function handleSign() {
     setSigning(true);
     if (!safeTx) {
@@ -86,6 +100,11 @@ export default function TxDetailsClient() {
     setTimeout(() => setToast(null), 3000);
   }
 
+  /**
+   * Handle broadcasting the transaction.
+   *
+   * @returns {Promise<void>} A promise that resolves when the broadcasting process is complete.
+   */
   async function handleBroadcast() {
     if (!safeTx) return;
     setBroadcasting(true);
@@ -259,6 +278,7 @@ export default function TxDetailsClient() {
                   )}
                 </div>
               </div>
+              {/* Action buttons: Sign and Broadcast */}
               <div
                 className="mt-4 flex flex-wrap gap-2"
                 data-testid="tx-details-actions-row"

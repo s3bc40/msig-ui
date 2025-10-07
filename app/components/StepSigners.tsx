@@ -12,6 +12,18 @@ interface StepSignersProps {
   onBack: () => void;
 }
 
+/**
+ * Component for managing signers and threshold in a multi-step process.
+ * @param {string[]} signers - An array of signer addresses.
+ * @param {number} threshold - The number of required signatures for transaction approval.
+ * @param {Function} addSignerField - Function to add a new signer input field.
+ * @param {Function} removeSignerField - Function to remove a signer input field by index.
+ * @param {Function} handleSignerChange - Function to handle changes in signer input fields.
+ * @param {Function} setThreshold - Function to set the threshold value.
+ * @param {Function} onNext - Function to proceed to the next step.
+ * @param {Function} onBack - Function to go back to the previous step.
+ * @returns A component for managing signers and threshold with validation and navigation controls.
+ */
 export default function StepSigners({
   signers,
   threshold,

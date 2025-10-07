@@ -6,14 +6,12 @@ const { expect } = test;
 
 test.beforeEach("Setup", async ({ page, metamask }) => {
   // Connect wallet if not already connected
-  if (
-    await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
-  ) {
-    await page.locator('[data-testid="rk-connect-button"]').first().click();
+  if (await page.getByTestId("rk-connect-button").first().isVisible()) {
+    await page.getByTestId("rk-connect-button").first().click();
     await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
       timeout: 60000,
     });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
+    await page.getByTestId("rk-wallet-option-metaMask").click();
     await metamask.connectToDapp();
   }
 });
@@ -39,7 +37,7 @@ test("should export SafeWallet data and verify file content", async ({
   // Trigger export and capture download
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.locator('[data-testid="export-wallets-btn"]').click(),
+    page.getByTestId("export-wallets-btn").click(),
   ]);
 
   // Read the downloaded file
@@ -105,7 +103,7 @@ test("should import SafeWallet data and restore accounts", async ({ page }) => {
 
   // Simulate file upload for import
   const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.locator('[data-testid="import-wallets-btn"]').click();
+  await page.getByTestId("import-wallets-btn").click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(importFilePath);
 
@@ -113,7 +111,7 @@ test("should import SafeWallet data and restore accounts", async ({ page }) => {
   await page.waitForSelector('[data-testid="import-modal"]', {
     state: "visible",
   });
-  const replaceBtn = page.locator('[data-testid="replace-wallets-btn"]');
+  const replaceBtn = page.getByTestId("replace-wallets-btn");
   await replaceBtn.waitFor({ state: "visible" });
   await expect(replaceBtn).toBeEnabled();
   await replaceBtn.click();

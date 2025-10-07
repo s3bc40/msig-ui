@@ -5,6 +5,7 @@ import React, {
   useState,
   memo,
   useMemo,
+  useCallback,
 } from "react";
 import { FormAction, NetworkFormState } from "../utils/types";
 import { sanitizeUserInput } from "../utils/helpers";
@@ -25,14 +26,23 @@ export type NetworkFormErrors = Partial<
   symbol?: string;
 };
 
+/**
+ * Network Form Component
+ *
+ * This component provides a form for adding or editing blockchain network configurations.
+ * It includes fields for RPC URL, chain ID, name, block explorer URL, and native currency details.
+ * The form handles validation, error states, and auto-detection of chain information based on the provided RPC URL.
+ *
+ * @param {NetworkFormProps} props - The properties for the NetworkForm component.
+ * @returns The NetworkForm component.
+ */
 export default function NetworkForm({
   setShowForm,
   onSubmit,
   initialState,
   onCancel,
 }: NetworkFormProps) {
-  // useReducer for form state
-
+  // useReducer for form state management
   function formReducer(
     state: NetworkFormState,
     action: FormAction,
@@ -67,7 +77,13 @@ export default function NetworkForm({
   const [suggested, setSuggested] = useState<Partial<NetworkFormState> | null>(
     null,
   );
+  // Debounce for RPC URL detection
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  /**
+   * Effect to update suggested chain info when detectedChain changes.
+   * Prefills form fields with detected values if available.
+   */
   useEffect(() => {
     if (detectedChain && detectedChain.chain) {
       // Only auto-suggest if chainId is present
@@ -87,14 +103,23 @@ export default function NetworkForm({
     }
   }, [detectedChain]);
 
-  const handleBlur = React.useCallback((field: string) => {
+  /**
+   * Handle blur event for form fields to mark them as touched.
+   *
+   * @param {string} field - The name of the form field that lost focus.
+   * @returns void
+   */
+  const handleBlur = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
 
-  // Debounce for RPC URL detection
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const debouncedDetectChain = React.useCallback(
+  /**
+   * Debounced function to detect chain information from the provided RPC URL.
+   *
+   * @param {string} rpcUrl - The RPC URL to detect chain information from.
+   * @returns void
+   */
+  const debouncedDetectChain = useCallback(
     (rpcUrl: string) => {
       if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
       debounceTimeout.current = setTimeout(() => {
@@ -104,7 +129,13 @@ export default function NetworkForm({
     [detectChain],
   );
 
-  const handleRpcChange = React.useCallback(
+  /**
+   * Handle changes to the RPC URL field with validation and debounced chain detection.
+   *
+   * @param {string} value - The new RPC URL value.
+   * @returns void
+   */
+  const handleRpcChange = useCallback(
     async (value: string) => {
       const sanitized = sanitizeUserInput(value);
       dispatch({ type: "update", key: "rpcUrl", value: sanitized });
@@ -123,7 +154,14 @@ export default function NetworkForm({
     [debouncedDetectChain],
   );
 
-  const handleChange = React.useCallback(
+  /**
+   * Handle changes to form fields with validation.
+   *
+   * @param {K} key - The key of the form field to update.
+   * @param {string | number} value - The new value for the form field.
+   * @returns void
+   */
+  const handleChange = useCallback(
     <K extends keyof NetworkFormState>(
       key: K,
       value: string | number,
@@ -147,7 +185,8 @@ export default function NetworkForm({
     [],
   );
 
-  const handleCurrencyChange = React.useCallback(
+  // Handle changes to native currency fields with validation.
+  const handleCurrencyChange = useCallback(
     <K extends keyof NetworkFormState["nativeCurrency"]>(
       key: K,
       value: string | number,
@@ -178,6 +217,16 @@ export default function NetworkForm({
     [],
   );
 
+  /**
+   * Suggestion Component
+   *
+   * A memoized component to display a suggestion button for auto-filling form fields.
+   *
+   * @param {keyof NetworkFormState | keyof NetworkFormState["nativeCurrency"]} field - The field to update when the suggestion is clicked.
+   * @param {string | number} value - The suggested value to use.
+   * @param {boolean} [isCurrency] - Whether the field is part of the native currency object.
+   * @returns A button that, when clicked, updates the corresponding form field with the suggested value.
+   */
   const Suggestion = memo(function Suggestion({
     field,
     value,
@@ -232,6 +281,7 @@ export default function NetworkForm({
     state.id,
   ]);
 
+  // Extracted and memoized chain IDs for comparison
   const chainIdFromRpc = useMemo(() => {
     return suggested?.id && Number(suggested?.id) !== 0
       ? Number(suggested?.id)
@@ -250,6 +300,12 @@ export default function NetworkForm({
     );
   }, [chainIdFromRpc, chainIdInput]);
 
+  /**
+   * Handle form submission.
+   *
+   * @param e - Form submit event
+   * @returns void
+   */
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isFormComplete || !!chainIdMismatch) return;
@@ -297,7 +353,7 @@ export default function NetworkForm({
           )}
         </fieldset>
         <fieldset
-          className={`fieldset flex-1${chainIdMismatch ? " border-warning" : ""}`}
+          className={`fieldset flex-1${chainIdMismatch ? "border-warning" : ""}`}
         >
           <legend className="fieldset-legend">Chain ID</legend>
           <input

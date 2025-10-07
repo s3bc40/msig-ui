@@ -6,6 +6,14 @@ interface AppAddressProps {
   testid?: string;
 }
 
+/**
+ * Component to display a blockchain address.
+ *
+ * @param {string} address - The blockchain address to display.
+ * @param {string} [className] - Optional additional CSS classes for styling.
+ * @param {string} [testid] - Optional test ID for testing purposes.
+ * @returns A styled span element containing the blockchain address.
+ */
 export default function AppAddress({
   address,
   className,

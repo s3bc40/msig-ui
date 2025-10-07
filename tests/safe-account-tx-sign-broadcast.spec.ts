@@ -96,13 +96,11 @@ test("should not sign if not owner", async ({ page, metamask }) => {
   await metamask.switchAccount("Account 10");
 
   // Verify connected to non-owner account
-  await expect(page.locator('[data-testid="rk-account-button"]')).toBeVisible();
-  await expect(page.locator('[data-testid="rk-account-button"]')).toContainText(
-    "0xa0",
-  ); // Anvil Account 10
-  await expect(
-    page.locator('[data-testid="rk-account-button"]'),
-  ).not.toContainText("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"); // Account 1
+  await expect(page.getByTestId("rk-account-button")).toBeVisible();
+  await expect(page.getByTestId("rk-account-button")).toContainText("0xa0"); // Anvil Account 10
+  await expect(page.getByTestId("rk-account-button")).not.toContainText(
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  ); // Account 1
 
   // Sign button should be disabled
   await expect(signBtn).toBeDisabled();

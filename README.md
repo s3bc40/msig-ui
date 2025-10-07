@@ -6,6 +6,7 @@ A web interface for managing multisignature wallets inspired by SafeWallet and E
 
 - [MSIG UI](#msig-ui)
   - [Features](#features)
+  - [Tech Stack:](#tech-stack)
   - [Quickstart](#quickstart)
     - [Requirements](#requirements)
     - [Running the dev server](#running-the-dev-server)
@@ -27,6 +28,16 @@ A web interface for managing multisignature wallets inspired by SafeWallet and E
 - **Modal Interactions**: Deployment, broadcast, error, and import/export modals.
 - **Wallet Connection**: MetaMask and RainbowKit integration.
 - **Client-Side State**: All wallet and transaction logic is handled client-side using wagmi, RainbowKit, and Safe Protocol Kit.
+
+## Tech Stack:
+
+- **Next.js**: React framework for server-side rendering and static site generation.
+- **TypeScript**: Superset of JavaScript for type safety.
+- **Tailwind CSS & DaisyUI**: Utility-first CSS framework and component library for styling.
+- **wagmi & RainbowKit**: React hooks and components for Ethereum wallet management.
+- **Safe Protocol Kit**: SDK for interacting with Safe contracts.
+- **Synpress & Playwright**: E2E testing with MetaMask automation and browser control.
+- **Foundry & Anvil**: Smart contract development and local Ethereum node for testing.
 
 ## Quickstart
 
@@ -52,8 +63,6 @@ A web interface for managing multisignature wallets inspired by SafeWallet and E
 
 ```ini
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
-  NEXT_PUBLIC_ETH_SEPOLIA_RPC_URL=your_sepolia_rpc_url
-  NEXT_PUBLIC_OP_SEPOLIA_RPC_URL=your_optimism_sepolia_rpc_url
 ```
 
 4. Start the development server:
@@ -79,8 +88,8 @@ A web interface for managing multisignature wallets inspired by SafeWallet and E
 4. Execute synpress once to set up its cache:
 
 ```bash
-  pnpm exec synpress
-  # pnpm exec synpress --force  # use this if you switch environments (devcontainer vs local)
+  pnpm run synpress:build # it runs anvil in the background
+  # pnpm exec synpress -- you can can run it by itself too
 ```
 
 _Note: you may need to start anvil in another terminal with `anvil` if you see errors about MetaMask not being able to connect to the network. After completion you can close it._
@@ -90,6 +99,8 @@ _Note: you may need to start anvil in another terminal with `anvil` if you see e
 ```bash
   pnpm run test:e2e
 ```
+
+_Note: there is a utility command `pnpm run test:clean` to clean up any wild processes (next-server, anvil) that may remain running in the background._
 
 - Tests are written using Synpress (MetaMask automation) and Playwright.
 - Test scripts are located in `tests/` and cover Safe account creation, dashboard, wallet import/export, and transaction workflows.
@@ -226,7 +237,7 @@ To run your own local Safe contracts for development, follow these steps:
 
 ## TODO
 
-- [ ] Let user create their network configuration (RPC URL, chainId, etc.) in UI and store in localStorage.
+- [x] Let user create their network configuration (RPC URL, chainId, etc.) in UI and store in localStorage.
 - [ ] Let user remove current transaction from Safe dashboard.
 - [ ] Improve devcontainer setup for E2E tests; currently, UI mode has limitations.
 - [ ] Ensure smooth DX when switching between local and devcontainer environments and wild processes cleaning (next-server, anvil).
@@ -248,6 +259,9 @@ To run your own local Safe contracts for development, follow these steps:
 - [RainbowKit](https://www.rainbowkit.com/)
 - [Synpress](https://docs.synpress.io/)
 - [Playwright](https://playwright.dev/)
+- [Foundry](https://getfoundry.sh/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [DaisyUI](https://daisyui.com/)
 
 ## Contributors
 

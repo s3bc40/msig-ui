@@ -8,6 +8,15 @@ interface AppCardProps {
   testid?: string;
 }
 
+/**
+ * A reusable card component with optional title and action buttons.
+ * @param {React.ReactNode} children - The content to be displayed inside the card.
+ * @param {string} [className] - Optional additional CSS classes for styling.
+ * @param {React.ReactNode} [title] - Optional title to be displayed at the top of the card.
+ * @param {React.ReactNode} [actions] - Optional action buttons to be displayed at the bottom of the card.
+ * @param {string} [testid] - Optional test ID for testing purposes.
+ * @returns A styled card component with optional title and actions.
+ */
 export default function AppCard({
   children,
   className,

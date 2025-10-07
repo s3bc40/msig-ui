@@ -9,6 +9,12 @@ export interface ImportSafeWalletModalProps {
   setSafeWalletData: (data: SafeWalletData) => void;
 }
 
+/**
+ * Generate a summary string for the imported SafeWallet data.
+ *
+ * @param {SafeWalletData | { error: string } | null} data - The imported SafeWallet data or an error object.
+ * @returns A summary string of the SafeWallet data or an error message.
+ */
 function getSafeWalletSummary(
   data: SafeWalletData | { error: string } | null,
 ): string {
@@ -40,6 +46,15 @@ function getSafeWalletSummary(
   return summary;
 }
 
+/**
+ * A modal component to import a SafeWallet data from a JSON object.
+ *
+ * @param {boolean} open - Whether the modal is open or not.
+ * @param {() => void} onClose - Function to call when closing the modal.
+ * @param {SafeWalletData | { error: string } | null} importPreview - The imported SafeWallet data or an error object.
+ * @param {(data: SafeWalletData) => void} setSafeWalletData - Function to set the SafeWallet data.
+ * @returns A modal component for importing SafeWallet data.
+ */
 export default function ImportSafeWalletModal({
   open,
   onClose,

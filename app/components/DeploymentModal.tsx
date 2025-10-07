@@ -2,6 +2,25 @@ import React from "react";
 import AppAddress from "@/app/components/AppAddress";
 import { DeploymentModalProps } from "../utils/types";
 
+/**
+ * DeploymentModal Component
+ *
+ * This component displays a modal dialog to show the progress of a deployment workflow.
+ * It includes steps with their statuses, transaction hash (if available), error messages,
+ * and action buttons for closing the modal or proceeding after a successful deployment.
+ *
+ * @param {boolean} open - Indicates if the modal is open.
+ * @param {Array<{ step: string; status: string }>} steps - Array of steps with their statuses.
+ * @param {Record<string, string>} stepLabels - Labels for each step.
+ * @param {string} [txHash] - Optional transaction hash to display.
+ * @param {string} [error] - Optional error message to display.
+ * @param {import("wagmi").Chain | null} [selectedNetwork] - The selected network information.
+ * @param {() => void} onClose - Function to call when closing the modal.
+ * @param {string} [closeLabel="Close"] - Label for the close button.
+ * @param {() => void} [onSuccess] - Function to call when the success button is clicked.
+ * @param {string} [successLabel="Back to Safe"] - Label for the success button.
+ * @returns A modal component displaying the deployment workflow progress.
+ */
 export default function DeploymentModal({
   open,
   steps,

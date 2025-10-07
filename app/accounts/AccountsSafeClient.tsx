@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-
-// Helper to summarize SafeWalletData for preview
+import React, { useRef, useState } from "react";
 import Link from "next/link";
 import AppSection from "@/app/components/AppSection";
 import AppCard from "@/app/components/AppCard";
@@ -11,14 +9,34 @@ import { useChains, useSwitchChain } from "wagmi";
 import { SafeWalletData } from "../utils/types";
 import ImportSafeWalletModal from "../components/ImportSafeWalletModal";
 
+/**
+ * Accounts Page Component
+ *
+ * This component serves as the main entry point for the Accounts page.
+ * It imports and renders the AccountsSafeClient component, which contains
+ * the client-side logic and UI for managing safe accounts.
+ *
+ * @returns The Accounts page component.
+ */
 export default function AccountsPage() {
+  // Hooks
   const wagmiChains = useChains();
   const { switchChain } = useSwitchChain();
   const { safeWalletData, setSafeWalletData } = useSafeWalletContext();
+
+  // State for toggling deployed/undeployed safes
   const [showDeployed, setShowDeployed] = useState(true);
+  // State for import modal and preview
+  const [showImportModal, setShowImportModal] = useState<boolean>(false);
+  const [importPreview, setImportPreview] = useState<
+    SafeWalletData | { error: string } | null
+  >(null);
+
+  // Ref for hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Group safes by safeAddress for accordion display using addressBook and undeployedSafes
-  const getGroupedSafes = (type: "deployed" | "undeployed") => {
+  function getGroupedSafes(type: "deployed" | "undeployed") {
     const grouped: Record<
       string,
       Array<{ chainId: string; name: string }>
@@ -41,8 +59,9 @@ export default function AccountsPage() {
       });
     });
     return grouped;
-  };
+  }
 
+  // Get safes to display based on toggle
   const groupedSafes = getGroupedSafes(
     showDeployed ? "deployed" : "undeployed",
   );
@@ -62,13 +81,6 @@ export default function AccountsPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
-
-  // State for import modal and preview
-  const [showImportModal, setShowImportModal] = useState<boolean>(false);
-  const [importPreview, setImportPreview] = useState<
-    SafeWalletData | { error: string } | null
-  >(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Import logic: open file picker, parse JSON, show modal
   function handleImportClick() {
@@ -103,6 +115,7 @@ export default function AccountsPage() {
       <AppCard testid="safe-accounts-table">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Safe Accounts</h2>
+          {/* Create / Add Safe Buttons */}
           <div className="flex flex-col gap-2 md:flex-row">
             <Link
               href="/new-safe/create"
@@ -120,6 +133,7 @@ export default function AccountsPage() {
             </Link>
           </div>
         </div>
+        {/* Toggle Deployed/Undeployed */}
         <div className="mb-4 flex justify-center">
           <div className="form-control">
             <label className="label cursor-pointer gap-2">
@@ -135,6 +149,7 @@ export default function AccountsPage() {
             </label>
           </div>
         </div>
+        {/* Safe Accounts List/Accordion */}
         <div className="flex flex-col gap-4">
           {Object.keys(groupedSafes).length === 0 ? (
             <div className="text-center text-gray-400">No Safes found.</div>
@@ -143,6 +158,7 @@ export default function AccountsPage() {
               // Use the first chain's name for display, since all have the same name
               const displayName = chains[0]?.name || safeAddress;
               return (
+                // Accordion item for each safeAddress
                 <div
                   className="bg-base-100 border-base-300 collapse-arrow collapse border"
                   key={safeAddress}
@@ -157,6 +173,7 @@ export default function AccountsPage() {
                       {safeAddress}
                     </span>
                   </div>
+                  {/*  Expanded content with chain links */}
                   <div className="collapse-content">
                     <ul className="list bg-base-100 rounded-box gap-4 shadow-md">
                       {chains.map(({ chainId }) => (

@@ -1,3 +1,8 @@
+/**
+ * SVG icon representing a pen or edit action.
+ *
+ * @returns SVG icon representing a pen or edit action.
+ */
 export default function XSymbolSvg() {
   return (
     <svg

@@ -10,7 +10,18 @@ import { useSafeWalletContext } from "@/app/provider/SafeWalletProvider";
 import useNewSafe from "@/app/hooks/useNewSafe";
 import { getRandomSafeName, sanitizeUserInput } from "@/app/utils/helpers";
 
+/**
+ * Connect Safe Client Component
+ *
+ * This component provides the UI and logic for connecting an existing safe.
+ * It includes form fields for entering the safe name, address, and selecting
+ * the network. It handles validation, error states, and integrates with the
+ * SafeWallet context to add the connected safe.
+ *
+ * @returns The Connect Safe client component.
+ */
 export default function ConnectSafeClient() {
+  // Hooks
   const chains = useChains();
   const { addSafe, safeWalletData } = useSafeWalletContext();
   const { connectNewSafe } = useNewSafe();
@@ -26,7 +37,13 @@ export default function ConnectSafeClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Add Safe workflow handler
+  /**
+   * Handle adding an existing safe to the wallet.
+   *
+   * Validates the address, chain selection, and name.
+   *
+   * @returns Promise<void>
+   */
   async function handleAddSafe() {
     setLoading(true);
     setError(null);
@@ -77,6 +94,7 @@ export default function ConnectSafeClient() {
       setLoading(false);
     }
   }
+
   return (
     <AppSection className="flex min-h-screen items-center">
       <div className="self-start">
@@ -95,6 +113,8 @@ export default function ConnectSafeClient() {
           selected network. If your Safe is not yet deployed, please use the
           Create Safe flow.
         </div>
+
+        {/* Form Safe Name, Address, Network Select, Error, Add Button */}
         <fieldset className="fieldset w-full">
           <legend className="fieldset-legend">Safe Name</legend>
           <input

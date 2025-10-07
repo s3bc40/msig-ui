@@ -3,6 +3,7 @@ import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { ContractNetworks } from "./contractNetworks";
 import { Chain, ChainContract } from "viem";
 
+// Step status type
 type SafeStep = {
   status: "idle" | "running" | "success" | "error";
   error?: string;
@@ -17,6 +18,7 @@ export type SafeDeployStep = {
   txHash?: string;
 } & SafeStep;
 
+// Minimal EIP-1193 Provider type
 export type MinimalEIP1193Provider = {
   request: (args: unknown) => Promise<unknown>;
   on?: (...args: unknown[]) => void;
