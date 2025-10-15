@@ -84,7 +84,7 @@ export default function NavBar() {
   }, [checkChain]);
 
   return (
-    <nav className="navbar bg-base-200 border-base-100 sticky top-0 z-20 w-full justify-between border-b px-4">
+    <nav className="navbar bg-base-200 border-base-100 sticky top-0 z-20 w-full justify-between border-b px-1 sm:px-4">
       <div className="flex items-center">
         <Link
           className="mx-2 px-2 text-sm font-bold sm:text-xl"
@@ -101,7 +101,7 @@ export default function NavBar() {
           {/* Moon */}
           <MoonSvg />
         </label>
-        <div className="divider divider-horizontal"></div>
+        <div className="divider divider-horizontal mx-1"></div>
         {isConnected && (
           <>
             {/* Manage Network button with indicator if needed */}
@@ -112,17 +112,20 @@ export default function NavBar() {
                 </span>
               )}
               <button
-                className="btn btn-primary sm:btn-sm btn-xs btn-circle"
+                className="btn btn-primary sm:btn-sm btn-xs rounded"
                 onClick={handleOpenNetworkModal}
                 title="Manage Networks"
               >
-                <NetworkChainSvg />
+                Add Network
               </button>
             </div>
-            <div className="divider divider-horizontal"></div>
+            {!showNetworkFormIndicator && (
+            <div className="divider divider-horizontal mx-1"></div>
+            )}
           </>
         )}
         <ConnectButton
+        chainStatus={showNetworkFormIndicator ? "none" : 	{ smallScreen: "icon", largeScreen: "full" }}
           accountStatus={{
             smallScreen: "avatar",
             largeScreen: "full",
