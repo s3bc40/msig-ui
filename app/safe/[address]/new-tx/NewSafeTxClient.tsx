@@ -147,32 +147,58 @@ export default function NewSafeTxClient() {
   function handleBuildTx(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // Validate recipient address
     const toAddr = to.trim();
     if (!toAddr || !toAddr.startsWith("0x") || toAddr.length !== 42) {
-      setError("Invalid recipient address format.");
+      setError("Invalid recipient address format. Must be 42 characters starting with 0x.");
       return;
     }
-    if (isNaN(Number(value)) || Number(value) < 0) {
+    // Validate address contains only hex characters
+    if (!/^0x[a-fA-F0-9]{40}$/.test(toAddr)) {
+      setError("Invalid recipient address. Must contain only hexadecimal characters.");
+      return;
+    }
+
+    // Validate and normalize value
+    const valueStr = value.trim();
+    if (valueStr && (isNaN(Number(valueStr)) || Number(valueStr) < 0)) {
       setError("Value must be a non-negative number.");
       return;
     }
+    // Default to "0" if empty to prevent empty string in EIP-712 signing
+    const normalizedValue = valueStr || "0";
+
+    // Validate data hex if provided
     const dataHex = data.trim();
+    if (dataHex && !dataHex.startsWith("0x")) {
+      setError("Data must start with 0x.");
+      return;
+    }
+    if (dataHex && dataHex.length > 2 && !/^0x[a-fA-F0-9]*$/.test(dataHex)) {
+      setError("Data must be valid hexadecimal.");
+      return;
+    }
+
+    // Determine method label
     let methodLabel = "Transfer";
-    if (dataHex) {
+    if (dataHex && dataHex !== "0x") {
       methodLabel = "Custom hex";
     } else if (abiJson && abiMethods.length > 0 && selectedMethod) {
       methodLabel = selectedMethod;
     }
+
     // Add transaction to the list
     setTransactions((txs) => [
       ...txs,
       {
         to: toAddr,
-        value: value,
-        data: dataHex,
+        value: normalizedValue,
+        data: dataHex || "0x",
         method: methodLabel,
       },
     ]);
+
     // Reset form fields
     setTo("");
     setValue("");

@@ -171,8 +171,9 @@ export default function TxDetailsClient() {
                 >
                   <span className="font-semibold">Value (wei)</span>
                   <span data-testid="tx-details-value-value">
-                    {safeTx.data.value?.toString?.() ??
-                      String(safeTx.data.value)}
+                    {safeTx.data.value?.toString?.() ||
+                      String(safeTx.data.value) ||
+                      "0"}
                   </span>
                 </div>
                 <div
