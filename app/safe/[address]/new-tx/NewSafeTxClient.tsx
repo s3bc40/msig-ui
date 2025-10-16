@@ -1,6 +1,7 @@
 "use client";
 
 import AppSection from "@/app/components/AppSection";
+import { isValidAddress } from "@/app/utils/helpers";
 import AppCard from "@/app/components/AppCard";
 import { useState } from "react";
 import React from "react";
@@ -154,8 +155,9 @@ export default function NewSafeTxClient() {
       setError("Invalid recipient address format. Must be 42 characters starting with 0x.");
       return;
     }
-    // Validate address contains only hex characters
-    if (!/^0x[a-fA-F0-9]{40}$/.test(toAddr)) {
+
+
+    if (!isValidAddress(toAddr)) {
       setError("Invalid recipient address. Must contain only hexadecimal characters.");
       return;
     }

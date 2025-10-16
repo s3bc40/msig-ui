@@ -65,7 +65,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
   const undeployedSafe =
     chainId &&
     safeWalletData.data.undeployedSafes[chainId]?.[
-      safeAddress as `0x${string}`
+    safeAddress as `0x${string}`
     ];
 
   // Store the current kit instance in a ref
@@ -133,8 +133,8 @@ export default function useSafe(safeAddress: `0x${string}`) {
         setIsOwner(
           checksummedSigner
             ? undeployedSafe.props.safeAccountConfig.owners.includes(
-                checksummedSigner as `0x${string}`,
-              )
+              checksummedSigner as `0x${string}`,
+            )
             : false,
         );
         setUnavailable(false);
@@ -387,29 +387,9 @@ export default function useSafe(safeAddress: `0x${string}`) {
       try {
         const kit = kitRef.current;
         if (!kit || !signer) return null;
-
-        // Debug: Log addresses involved in signing
-        console.log("=== Safe Transaction Signing Debug ===");
         const checksummedSigner = getAddress(signer);
-        console.log("Signer from wagmi:", signer);
-        console.log("Checksummed signer:", checksummedSigner);
-        console.log("Chain from wagmi:", chain);
-        console.log("ChainId from state:", chainId);
-
         // Get the actual account from the provider
         const provider = await getMinimalEIP1193Provider(connector);
-        if (provider) {
-          try {
-            const accounts = await provider.request({ method: 'eth_accounts' });
-            console.log("Provider accounts:", accounts);
-
-            // Check provider's chainId
-            const providerChainId = await provider.request({ method: 'eth_chainId' }) as string;
-            console.log("Provider chainId:", providerChainId, "Decimal:", parseInt(providerChainId, 16));
-          } catch (e) {
-            console.log("Could not get provider info:", e);
-          }
-        }
 
         // Re-connect the kit with the current signer to ensure proper context
         const reconnectedKit = await connectSafe(
@@ -434,8 +414,6 @@ export default function useSafe(safeAddress: `0x${string}`) {
             normalizedSafeTx.addSignature(sig);
           });
         }
-
-        console.log("Signing with reconnected kit and normalized transaction");
         const signedTx = await reconnectedKit.signTransaction(normalizedSafeTx);
         saveTransaction(safeAddress, signedTx);
         setHasSigned(true);
