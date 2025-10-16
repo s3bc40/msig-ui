@@ -6,6 +6,7 @@ import {
   createPredictionConfig,
   getMinimalEIP1193Provider,
 } from "../utils/helpers";
+import { getAddress } from "viem";
 
 // Cache for protocolKit instances (per chainId+safeAddress)
 import { useSafeTxContext } from "../provider/SafeTxProvider";
@@ -64,7 +65,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
   const undeployedSafe =
     chainId &&
     safeWalletData.data.undeployedSafes[chainId]?.[
-      safeAddress as `0x${string}`
+    safeAddress as `0x${string}`
     ];
 
   // Store the current kit instance in a ref
@@ -77,9 +78,11 @@ export default function useSafe(safeAddress: `0x${string}`) {
       provider: MinimalEIP1193Provider,
       signer: `0x${string}`,
     ): Promise<Safe> => {
+      // Ensure signer address is properly checksummed
+      const checksummedSigner = getAddress(signer);
       const config: SafeConfig = createConnectionConfig(
         provider,
-        signer,
+        checksummedSigner,
         safeAddress,
         contractNetworks,
       );
@@ -125,10 +128,14 @@ export default function useSafe(safeAddress: `0x${string}`) {
           undeployedConfig: undeployedSafe.props,
         });
         kitRef.current = null;
+        // Checksum signer for comparison with owners
+        const checksummedSigner = signer ? getAddress(signer) : null;
         setIsOwner(
-          undeployedSafe.props.safeAccountConfig.owners.includes(
-            signer as `0x${string}`,
-          ),
+          checksummedSigner
+            ? undeployedSafe.props.safeAccountConfig.owners.includes(
+              checksummedSigner as `0x${string}`,
+            )
+            : false,
         );
         setUnavailable(false);
       } else if (deployedSafe) {
@@ -225,9 +232,11 @@ export default function useSafe(safeAddress: `0x${string}`) {
           return steps;
         }
         // Build SafeConfig using helper for ProtocolKit compatibility
+        // Ensure signer address is properly checksummed
+        const checksummedSigner = signer ? getAddress(signer) : undefined;
         const config: SafeConfig = createPredictionConfig(
           provider,
-          signer,
+          checksummedSigner,
           undeployedSafe.props.safeAccountConfig.owners,
           undeployedSafe.props.safeAccountConfig.threshold,
           undeployedSafe.props.saltNonce,
@@ -331,8 +340,15 @@ export default function useSafe(safeAddress: `0x${string}`) {
       const kit = kitRef.current;
       if (!kit) return null;
       try {
+        // Normalize transactions to ensure value is never empty string
+        const normalizedTxs = txs.map(tx => ({
+          ...tx,
+          value: tx.value || "0",
+          data: tx.data || "0x",
+        }));
+
         const safeTx = await kit.createTransaction({
-          transactions: txs,
+          transactions: normalizedTxs,
         });
         // txHash no longer needed
         saveTransaction(safeAddress, safeTx);
@@ -370,8 +386,35 @@ export default function useSafe(safeAddress: `0x${string}`) {
     async (safeTx: EthSafeTransaction): Promise<EthSafeTransaction | null> => {
       try {
         const kit = kitRef.current;
-        if (!kit) return null;
-        const signedTx = await kit.signTransaction(safeTx);
+        if (!kit || !signer) return null;
+        const checksummedSigner = getAddress(signer);
+        // Get the actual account from the provider
+        const provider = await getMinimalEIP1193Provider(connector);
+
+        // Re-connect the kit with the current signer to ensure proper context
+        const reconnectedKit = await connectSafe(
+          safeAddress,
+          provider!,
+          checksummedSigner as `0x${string}`,
+        );
+
+        // Normalize the transaction data to fix empty string values
+        // This handles existing transactions that were created before validation fix
+        const normalizedTxData = {
+          ...safeTx.data,
+          value: safeTx.data.value || "0",
+          data: safeTx.data.data || "0x",
+        };
+
+        // Create a new transaction with normalized data
+        const normalizedSafeTx = new EthSafeTransaction(normalizedTxData);
+        // Copy signatures if any exist
+        if (safeTx.signatures) {
+          safeTx.signatures.forEach((sig) => {
+            normalizedSafeTx.addSignature(sig);
+          });
+        }
+        const signedTx = await reconnectedKit.signTransaction(normalizedSafeTx);
         saveTransaction(safeAddress, signedTx);
         setHasSigned(true);
         return signedTx;
@@ -380,7 +423,7 @@ export default function useSafe(safeAddress: `0x${string}`) {
         return null;
       }
     },
-    [saveTransaction, safeAddress],
+    [saveTransaction, safeAddress, signer, connector, connectSafe],
   );
 
   // Broadcast a SafeTransaction
@@ -401,9 +444,11 @@ export default function useSafe(safeAddress: `0x${string}`) {
       const safeTx = getTransaction(safeAddress);
       if (!safeTx) return null;
       // Check if current owner has already signed
+      // Safe SDK stores signatures with lowercase addresses
       let signed = false;
       if (safeTx.signatures && signer) {
-        signed = safeTx.signatures.has(signer.toLowerCase());
+        const checksummedSigner = getAddress(signer);
+        signed = safeTx.signatures.has(checksummedSigner.toLowerCase());
       }
       setHasSigned(signed);
       return safeTx;

@@ -40,6 +40,12 @@ export const WagmiConfigProvider: React.FC<{
   ]);
 
   const [chainsLoaded, setChainsLoaded] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure we're on the client side before initializing
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load chains from localStorage on mount
   useEffect(() => {
@@ -68,18 +74,24 @@ export const WagmiConfigProvider: React.FC<{
     }
   }, [configChains, chainsLoaded]);
 
-  // Compute wagmi config from chains
-  const wagmiConfig = useMemo(
-    () =>
-      getDefaultConfig({
-        appName: "MSIG UI",
-        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-        chains: configChains as [typeof mainnet, ...[typeof mainnet]],
-        ssr: false,
-      }),
-    [configChains],
-  );
+  // Compute wagmi config from chains - only on client side
+  const wagmiConfig = useMemo(() => {
+    if (!isMounted) return null;
+
+    return getDefaultConfig({
+      appName: "MSIG UI",
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+      chains: configChains as [typeof mainnet, ...[typeof mainnet]],
+      ssr: false,
+    });
+  }, [configChains, isMounted]);
+
   const [queryClient] = useState(() => new QueryClient());
+
+  // Don't render providers until client-side mounted
+  if (!isMounted || !wagmiConfig) {
+    return null;
+  }
 
   return (
     <WagmiConfigContext.Provider
