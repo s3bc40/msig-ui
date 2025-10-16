@@ -76,10 +76,6 @@ test("should export Safe transaction JSON and verify file content", async ({
     await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
-    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 60000,
-    });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
   }
 
   // Click the Safe row link for the correct chain/address
@@ -141,10 +137,6 @@ test("should import Safe transaction JSON and show in dashboard", async ({
     await page.locator('[data-testid="rk-connect-button"]').first().isVisible()
   ) {
     await page.locator('[data-testid="rk-connect-button"]').first().click();
-    await page.waitForSelector('[data-testid="rk-wallet-option-metaMask"]', {
-      timeout: 60000,
-    });
-    await page.locator('[data-testid="rk-wallet-option-metaMask"]').click();
   }
 
   // Click the Safe row link for the correct chain/address
